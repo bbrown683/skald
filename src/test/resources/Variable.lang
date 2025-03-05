@@ -1,0 +1,10 @@
+package language.sample;
+
+pub mut var x: int = 3;
+pub var y: int = 4;
+mut var a: char = 'a';
+var b: char = 'b';
+
+pub static fn main(args: java.lang.String[]) {
+
+}

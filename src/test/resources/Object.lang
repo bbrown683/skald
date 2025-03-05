@@ -1,0 +1,15 @@
+package language.sample;
+
+pub static fn main(args: string[]) {
+
+}
+
+type Car {
+    var make : java.lang.String;
+    var model : java.lang.String;
+
+    new(make: java.lang.String, model: java.lang.String) {
+        this.make = make;
+        this.model = model;
+    }
+}

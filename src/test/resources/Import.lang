@@ -1,0 +1,7 @@
+package language.sample'
+
+import java.util.List;
+
+pub static fn main(args: string[]) {
+    var list = List.of("Hello", "World");
+}
