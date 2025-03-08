@@ -1,5 +1,0 @@
-package language.sample;
-
-pub static fn main(args: string[]) {
-    System.out.println("Hello, World!");
-}

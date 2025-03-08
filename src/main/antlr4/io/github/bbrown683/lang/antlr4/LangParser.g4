@@ -3,20 +3,15 @@ parser grammar LangParser;
 options { tokenVocab=LangLexer; }
 
 classFile
-    : packagePath importPath*
-    (memberVariable | function | object | enum | union)* EOF
+    : packagePath? importPath*
+    (variable | function | object | enum | union)* EOF
     ;
 
 packagePath : PACKAGE path SEMICOLON;
 importPath : IMPORT path SEMICOLON;
-path : (IDENTIFIER PERIOD)* (IDENTIFIER | STAR);
-
-memberVariable
-    : PUBLIC? variable
-    ;
 
 variable
-    : MUTABLE? VARIABLE IDENTIFIER COLON typeName array? (EQUALS literals | expression)? SEMICOLON
+    : PUBLIC? STATIC? MUTABLE? VARIABLE IDENTIFIER (COLON typeName array*)? (EQUALS (literals | reference | expression))? SEMICOLON
     ;
 
 array
@@ -30,11 +25,11 @@ function
     ;
 
 functionParameter
-    : IDENTIFIER COLON typeName array?
+    : IDENTIFIER COLON typeName array*
     ;
 
 object
-    : TYPE IDENTIFIER LEFT_BRACE (memberVariable | function)* RIGHT_BRACE
+    : TYPE IDENTIFIER LEFT_BRACE (variable | function)* RIGHT_BRACE
     ;
 
 enum
@@ -88,19 +83,26 @@ matchDefaultCase
     ;
 
 functionCall
-    : (IDENTIFIER | path) LEFT_PAREN (functionCallArgument (COMMA functionCallArgument)*)? RIGHT_PAREN SEMICOLON
+    : reference LEFT_PAREN (functionCallArgument (COMMA functionCallArgument)*)? RIGHT_PAREN SEMICOLON
     ;
 
 functionCallArgument
-    : expression | literals
+    : literals | reference | expression
     ;
 
 expression
     : ifStatement | whileLoop | forLoop | matchStatement | functionCall | variable
     ;
+
 typeName
-    : baseTypes | IDENTIFIER | path
+    : baseTypes | reference
     ;
+
+reference
+    : IDENTIFIER | path
+    ;
+
+path : (IDENTIFIER PERIOD)+ (IDENTIFIER | STAR);
 
 baseTypes: BYTE | UNSIGNED_BYTE | SHORT | UNSIGNED_SHORT | INT | UNSIGNED_INT | LONG | UNSIGNED_LONG | FLOAT | DOUBLE | BOOLEAN | STRING | CHAR;
 literals: STRING_LITERAL | CHAR_LITERAL | INTEGER_LITERAL | FLOAT_LITERAL | TRUE | FALSE;

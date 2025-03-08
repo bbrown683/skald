@@ -1,0 +1,5 @@
+pub fn main(args: string[]) {
+    var helloWorld : string = "Hello, World!";
+    var printStream : java.io.PrintStream = java.lang.System.out;
+    printStream.println(helloWorld);
+}

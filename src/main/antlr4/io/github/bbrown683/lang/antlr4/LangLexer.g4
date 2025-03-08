@@ -8,6 +8,8 @@ FUNCTION: 'fn';
 MUTABLE: 'mut';
 PUBLIC: 'pub';
 NEW: 'new';
+GET: 'get';
+SET: 'set';
 IF: 'if';
 ELSE: 'else';
 WHILE: 'while';
@@ -46,6 +48,7 @@ UNSIGNED_LONG: 'ulong';
 FLOAT: 'float';
 DOUBLE: 'double';
 BOOLEAN: 'bool';
+STRING: 'string';
 CHAR: 'char';
 
 STRING_LITERAL: '"' ~["\r\n]* '"';

@@ -1,10 +1,29 @@
-package language.sample;
+var testGlobalBoolTrue : boolean = true;
+var testGlobalBoolFalse : boolean = false;
+var testGlobalByte : byte = 127;
+var testGlobalShort : short = 32767;
+var testGlobalInt : int = 32767;
+var testGlobalLong : long = 9223372036854775807;
+var testGlobalFloat : float = 3.4028235;
+var testGlobalDouble : double = 1.7976931348623157;
+var testGlobalChar : char = 'a';
+var testGlobalString : string = "Hello, World!";
 
-pub mut var x: int = 3;
-pub var y: int = 4;
-mut var a: char = 'a';
-var b: char = 'b';
+mut var testGlobalBoolTrueMut : boolean = true;
+mut var testGlobalBoolFalseMut : boolean = false;
 
-pub static fn main(args: java.lang.String[]) {
+pub static fn main(args: string[]) {
+    var testBoolTrue : boolean = true;
+    var testBoolFalse : boolean = false;
+    var testByte : byte = 127;
+    var testShort : short = 32767;
+    var testInt : int  = 2147483647;
+    var testLong : long = 9223372036854775807;
+    var testFloat : float = 3.4028235;
+    var testDouble : double = 1.7976931348623157;
+    var testChar : char = 'a';
+    var testString : string = "Hello, World!";
 
+    mut var testBoolTrueMut : boolean = true;
+    mut var testBoolFalseMut : boolean = false;
 }
