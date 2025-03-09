@@ -1,5 +1,19 @@
+var testGlobal : byte = 127;
+
 pub fn main(args: string[]) {
     var helloWorld : string = "Hello, World!";
-    var printStream : java.io.PrintStream = java.lang.System.out;
-    printStream.println(helloWorld);
+    if helloWorld {
+        var testInt : int = 2147483647;
+        for testInt in helloWorld {
+            var testBool : boolean = true;
+        }
+
+        while testInt {
+            mut var testMutableChar : char = 'a';
+        }
+    }
+}
+
+pub fn testFunction(testParameter1: string, testParameter2: string) {
+
 }

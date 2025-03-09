@@ -1,6 +1,6 @@
-parser grammar LangParser;
+parser grammar JasperParser;
 
-options { tokenVocab=LangLexer; }
+options { tokenVocab=JasperLexer; }
 
 classFile
     : packagePath? importPath*
@@ -25,7 +25,7 @@ function
     ;
 
 functionParameter
-    : IDENTIFIER COLON typeName array*
+    : MUTABLE? IDENTIFIER COLON typeName array*
     ;
 
 object
@@ -91,7 +91,7 @@ functionCallArgument
     ;
 
 expression
-    : ifStatement | whileLoop | forLoop | matchStatement | functionCall | variable
+    : reference | ifStatement | whileLoop | forLoop | matchStatement | functionCall | variable
     ;
 
 typeName

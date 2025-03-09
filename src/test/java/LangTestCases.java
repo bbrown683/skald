@@ -1,9 +1,11 @@
-import io.github.bbrown683.jasper.antlr.JasperVisitor;
-import io.github.bbrown683.jasper.antlr4.LangLexer;
-import io.github.bbrown683.jasper.antlr4.LangParser;
+import io.github.bbrown683.jasper.antlr4.JasperLexer;
+import io.github.bbrown683.jasper.antlr4.JasperParser;
+import io.github.bbrown683.jasper.antlr4.SemanticVisitor;
+import io.github.bbrown683.jasper.antlr4.SymbolListener;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -20,14 +22,24 @@ public class LangTestCases extends ClassLoader {
         return inputStream;
     }
 
-    private byte[] getBytecode(String className, InputStream inputStream) throws IOException {
+    private void visit(String className, InputStream inputStream) throws IOException {
         CharStream charStream = CharStreams.fromStream(inputStream);
-        var lexer = new LangLexer(charStream);
-        var tokenStream = new CommonTokenStream(lexer);
-        var parser = new LangParser(tokenStream);
+        var lexer = new JasperLexer(charStream);
+        var parser = new JasperParser(new CommonTokenStream(lexer));
+        var classFileContext = parser.classFile();
 
-        JasperVisitor visitor = new JasperVisitor(className);
-        return visitor.visitClassFile(parser.classFile());
+        var symbolListener = new SymbolListener(className);
+
+        ParseTreeWalker walker = new ParseTreeWalker();
+        walker.walk(symbolListener, classFileContext);
+
+        var contextScope = symbolListener.getContextScopes();
+
+        var semanticVisitor = new SemanticVisitor(className, contextScope);
+        semanticVisitor.visitClassFile(classFileContext);
+
+        //var visitor = new CompilerVisitor(className);
+        return;
     }
 
     @Test
@@ -35,7 +47,8 @@ public class LangTestCases extends ClassLoader {
         String filename = "Test.lang";
         try(InputStream inputStream = loadFile(filename)) {
             String className = filename.split("\\.")[0];
-            byte[] bytecode = getBytecode(className, inputStream);
+            visit(className, inputStream);
+
         } catch(Exception e) {
             System.err.println("Failed to parse file due to error: " + e.getMessage());
         }

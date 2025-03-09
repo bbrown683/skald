@@ -1,4 +1,4 @@
-lexer grammar LangLexer;
+lexer grammar JasperLexer;
 
 PACKAGE: 'package';
 IMPORT: 'import';

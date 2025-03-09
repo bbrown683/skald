@@ -1,10 +1,8 @@
-package io.github.bbrown683.jasper.antlr;
+package io.github.bbrown683.jasper.antlr4;
 
 import io.github.bbrown683.jasper.ExpressionParameter;
 import io.github.bbrown683.jasper.jvm.InstructionGenerator;
 import io.github.bbrown683.jasper.jvm.InstructionUtil;
-import io.github.bbrown683.jasper.antlr4.LangParser;
-import io.github.bbrown683.jasper.antlr4.LangParserBaseVisitor;
 import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 import org.apache.bcel.Const;
@@ -15,15 +13,13 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.FileOutputStream;
 import java.util.*;
 
-public class JasperVisitor extends LangParserBaseVisitor<Object> {
+public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     private final String className;
     private ClassGen classGen;
     private ConstantPoolGen constantPoolGen;
-    private List<String> imports = new ArrayList<>();
     private InstructionUtil instructionUtil;
-    private InstructionGenerator instructionGenerator;
 
-    public JasperVisitor(String className) {
+    public CompilerVisitor(String className) {
         this.className = className;
     }
 
@@ -46,7 +42,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public byte[] visitClassFile(LangParser.ClassFileContext ctx) {
+    public byte[] visitClassFile(JasperParser.ClassFileContext ctx) {
         // Initialize with empty name until package is visited
         classGen = new ClassGen(className,
                 "java.lang.Object",
@@ -60,15 +56,15 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
         instructionUtil = new InstructionUtil(classGen, constantPoolGen);
 
         // Create empty constructor.
-        var constructorCtx = new LangParser.FunctionContext(null, -1);
+        var constructorCtx = new JasperParser.FunctionContext(null, -1);
         constructorCtx.start = ctx.start;
         constructorCtx.stop = ctx.stop;
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.FUNCTION, "fn")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.IDENTIFIER, "new")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.LEFT_PAREN, "(")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.RIGHT_PAREN, ")")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.LEFT_BRACE, "{")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(LangParser.RIGHT_BRACE, "}")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.FUNCTION, "fn")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.IDENTIFIER, "new")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.LEFT_PAREN, "(")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.RIGHT_PAREN, ")")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.LEFT_BRACE, "{")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.RIGHT_BRACE, "}")));
         visitFunction(constructorCtx, ctx.variable());
 
         var functions = ctx.function();
@@ -84,7 +80,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitPackagePath(LangParser.PackagePathContext ctx) {
+    public Object visitPackagePath(JasperParser.PackagePathContext ctx) {
         String path = ctx.path().getText();
         classGen.setClassName(path + "." + className);
         System.out.println("Package: " + path);
@@ -92,20 +88,19 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitImportPath(LangParser.ImportPathContext ctx) {
+    public Object visitImportPath(JasperParser.ImportPathContext ctx) {
         String path = ctx.path().getText();
-        imports.add(path);
         System.out.println("Import: " + path);
         return path;
     }
 
     @Override
-    public Object visitPath(LangParser.PathContext ctx) {
+    public Object visitPath(JasperParser.PathContext ctx) {
         return ctx.getText();
     }
 
     @Override
-    public Pair<String,Type> visitFunctionParameter(LangParser.FunctionParameterContext ctx) {
+    public Pair<String,Type> visitFunctionParameter(JasperParser.FunctionParameterContext ctx) {
         var identifierName = ctx.IDENTIFIER().getText();
         var typeName = visitTypeName(ctx.typeName());
 
@@ -123,7 +118,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
         return Pair.of(identifierName, getType(typeName));
     }
 
-    public Object visitFunction(LangParser.FunctionContext ctx, List<LangParser.VariableContext> fieldVariables) {
+    public Object visitFunction(JasperParser.FunctionContext ctx, List<JasperParser.VariableContext> fieldVariables) {
         String functionName = ctx.IDENTIFIER().getText();
         String returnTypeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
         System.out.println("===================================");
@@ -143,7 +138,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
 
         boolean isConstructor = functionName.equals("new");
         int isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
-        int isStatic = ctx.STATIC() != null || ctx.parent instanceof LangParser.ClassFileContext ? Const.ACC_STATIC : 0;
+        int isStatic = ctx.STATIC() != null || ctx.parent instanceof JasperParser.ClassFileContext ? Const.ACC_STATIC : 0;
 
         var methodGen = new MethodGen(isPublic | isStatic,
                 returnType,
@@ -196,11 +191,11 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFunction(LangParser.FunctionContext ctx) {
+    public Object visitFunction(JasperParser.FunctionContext ctx) {
         return visitFunction(ctx, null);
     }
 
-    public Object visitVariable(LangParser.VariableContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitVariable(JasperParser.VariableContext ctx, Map<ExpressionParameter, Object> parameters) {
         System.out.println("-----------------------------------");
         String variableName = ctx.IDENTIFIER().getText();
 
@@ -220,10 +215,11 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
         var methodInstructions = (InstructionList)parameters.get(ExpressionParameter.INSTRUCTION_LIST);
 
         var variableInstructions = new InstructionList();
+        var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen, variableInstructions, methodGen);
 
         // If we are in a constructor, we need to push the reference to the object onto the stack.
         boolean isConstructor = methodGen.getName().equals("<init>");
-        if(isConstructor) variableInstructions.append(instructionUtil.insertSelfReference());
+        if(isConstructor) instructionGenerator.callSuper();
 
         var literals = ctx.literals();
         var reference = ctx.reference();
@@ -232,15 +228,12 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
             Object literal = visitLiterals(literals);
             System.out.println("Literal: " + literal + ", Type: " + literal.getClass().getSimpleName());
 
-            // Push the literal onto the stack.
-            instructionGenerator.pushLiteral(literal);
-
             // If we are in a constructor, we need to create a field and store the value in it.
             // Otherwise, we need to create a local variable and store the value in it.
             if(isConstructor) {
-                instructionGenerator.addVariableAsField(variableName, type, isPublic | isStatic | isMutable, className);
+                instructionGenerator.addVariableAsLiteralField(variableName, literal, type, isPublic | isStatic | isMutable, className);
             } else {
-                instructionGenerator.addVariableAsLocalVariable(variableName, type, isPublic | isStatic | isMutable);
+                instructionGenerator.addVariableLiteralAsLiteralLocalVariable(variableName, literal, type);
             }
         } else if (reference != null) {
             String referenceName = visitReference(reference);
@@ -257,12 +250,12 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitVariable(LangParser.VariableContext ctx) {
+    public Object visitVariable(JasperParser.VariableContext ctx) {
         return visitVariable(ctx, Collections.emptyMap());
     }
 
     @Override
-    public Object visitFunctionCallArgument(LangParser.FunctionCallArgumentContext ctx) {
+    public Object visitFunctionCallArgument(JasperParser.FunctionCallArgumentContext ctx) {
         var literals = ctx.literals();
         if(literals != null) {
             Object literal = visitLiterals(literals);
@@ -282,7 +275,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFunctionCall(LangParser.FunctionCallContext ctx) {
+    public Object visitFunctionCall(JasperParser.FunctionCallContext ctx) {
         System.out.println("-----------------------------------");
         String reference = visitReference(ctx.reference());
 
@@ -299,7 +292,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
 
-    public Object visitExpression(LangParser.ExpressionContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitExpression(JasperParser.ExpressionContext ctx, Map<ExpressionParameter, Object> parameters) {
         if (ctx.variable() != null) {
             return visitVariable(ctx.variable(), parameters);
         }
@@ -310,12 +303,12 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitExpression(LangParser.ExpressionContext ctx) {
+    public Object visitExpression(JasperParser.ExpressionContext ctx) {
         return visitExpression(ctx, Collections.emptyMap());
     }
 
     @Override
-    public Object visitLiterals(LangParser.LiteralsContext ctx) {
+    public Object visitLiterals(JasperParser.LiteralsContext ctx) {
         var integerLiteral = ctx.INTEGER_LITERAL();
         if (integerLiteral != null) {
             String number = integerLiteral.getText();
@@ -349,7 +342,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public String visitTypeName(LangParser.TypeNameContext ctx) {
+    public String visitTypeName(JasperParser.TypeNameContext ctx) {
         if(ctx == null) {
             return "";
         }
@@ -357,7 +350,7 @@ public class JasperVisitor extends LangParserBaseVisitor<Object> {
     }
 
     @Override
-    public String visitReference(LangParser.ReferenceContext ctx) {
+    public String visitReference(JasperParser.ReferenceContext ctx) {
         return ctx.getText();
     }
 
