@@ -1,7 +1,5 @@
-import io.github.bbrown683.jasper.antlr4.JasperLexer;
-import io.github.bbrown683.jasper.antlr4.JasperParser;
-import io.github.bbrown683.jasper.antlr4.SemanticVisitor;
-import io.github.bbrown683.jasper.antlr4.SymbolListener;
+import io.github.bbrown683.jasper.antlr4.*;
+import io.github.bbrown683.jasper.symbol.v1.GlobalSymbolTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -28,15 +26,17 @@ public class LangTestCases extends ClassLoader {
         var parser = new JasperParser(new CommonTokenStream(lexer));
         var classFileContext = parser.classFile();
 
-        var symbolListener = new SymbolListener(className);
+        var symbolListener = new SymbolListener2(className);
 
         ParseTreeWalker walker = new ParseTreeWalker();
         walker.walk(symbolListener, classFileContext);
 
-        var contextScope = symbolListener.getContextScopes();
+        var symbolTable = symbolListener.getSymbolTable();
 
-        var semanticVisitor = new SemanticVisitor(className, contextScope);
-        semanticVisitor.visitClassFile(classFileContext);
+        //var contextScope = symbolListener.getContextScopes();
+
+        //var semanticVisitor = new SemanticVisitor(className, contextScope);
+        //semanticVisitor.visitClassFile(classFileContext);
 
         //var visitor = new CompilerVisitor(className);
         return;
@@ -52,5 +52,10 @@ public class LangTestCases extends ClassLoader {
         } catch(Exception e) {
             System.err.println("Failed to parse file due to error: " + e.getMessage());
         }
+    }
+
+    @Test
+    public void test2() {
+
     }
 }

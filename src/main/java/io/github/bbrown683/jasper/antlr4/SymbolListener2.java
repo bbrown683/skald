@@ -1,25 +1,19 @@
 package io.github.bbrown683.jasper.antlr4;
 
-import io.github.bbrown683.jasper.symbol.v1.*;
+import io.github.bbrown683.jasper.symbol.*;
 import lombok.Getter;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Stack;
 
-public class SymbolListener extends JasperParserBaseListener {
+public class SymbolListener2 extends JasperParserBaseListener {
     @Getter
-    private final SymbolTable symbolTable = new SymbolTable();
-    @Getter
-    private final Map<ParserRuleContext, Stack<Scope>> contextScopes = new HashMap<>();
+    private SymbolTable2 symbolTable;
     private final String className;
 
-    public SymbolListener(String className) {
+    public SymbolListener2(String className) {
         this.className = className;
     }
 
@@ -70,9 +64,7 @@ public class SymbolListener extends JasperParserBaseListener {
 
     @Override
     public void enterClassFile(JasperParser.ClassFileContext ctx) {
-        var classSymbol = new ClassFileSymbol(className);
-        symbolTable.addSymbol(classSymbol.getName(), classSymbol);
-        contextScopes.put(ctx, symbolTable.getCurrentScope());
+        symbolTable = new SymbolTable2(new ClassFileSymbol2(className, ctx));
     }
 
     @Override
@@ -83,9 +75,7 @@ public class SymbolListener extends JasperParserBaseListener {
         boolean isPublic = ctx.PUBLIC() != null;
         boolean isStatic = ctx.STATIC() != null;
 
-        var functionSymbol = new FunctionSymbol(functionName, getType(typeName), isPublic, isStatic);
-        symbolTable.addSymbol(functionSymbol.getName(), functionSymbol);
-        contextScopes.put(ctx, symbolTable.getCurrentScope());
+        symbolTable.addSymbol(new FunctionSymbol2(functionName, ctx, getType(typeName), isPublic, isStatic));
         symbolTable.enterScope();
     }
 
@@ -100,10 +90,9 @@ public class SymbolListener extends JasperParserBaseListener {
         var typeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
 
         boolean isMutable = ctx.MUTABLE() != null;
-        boolean isArray = ctx.array() != null;
-        var parameter = new VariableSymbol(variableName, getType(typeName), false, false, isMutable, isArray, true, false, null);
-        symbolTable.addSymbol(parameter.getName(), parameter);
-        contextScopes.put(ctx, symbolTable.getCurrentScope());
+        boolean isArray = ctx.array() != null && !ctx.array().isEmpty();
+
+        symbolTable.addSymbol(new VariableSymbol2(variableName, ctx, getType(typeName), false, false, isMutable, isArray, true, false, null));
     }
 
     @Override
@@ -114,16 +103,15 @@ public class SymbolListener extends JasperParserBaseListener {
         boolean isPublic = ctx.PUBLIC() != null;
         boolean isStatic = ctx.STATIC() != null;
         boolean isMutable = ctx.MUTABLE() != null;
-        boolean isArray = ctx.array() != null;
+        boolean isArray = ctx.array() != null && !ctx.array().isEmpty();
         boolean isLiteral = ctx.literals() != null;
 
-        var variableSymbol = new VariableSymbol(variableName, getType(typeName), isPublic, isStatic, isMutable, isArray, false, isLiteral, null);
-        symbolTable.addSymbol(variableSymbol.getName(), variableSymbol);
-        contextScopes.put(ctx, symbolTable.getCurrentScope());
+        symbolTable.addSymbol(new VariableSymbol2(variableName, ctx, getType(typeName), isPublic, isStatic, isMutable, isArray, false, isLiteral, null));
     }
 
     @Override
     public void enterForLoop(JasperParser.ForLoopContext ctx) {
+        symbolTable.addSymbol(new BlockSymbol("for", ctx));
         symbolTable.enterScope();
     }
 
@@ -134,6 +122,7 @@ public class SymbolListener extends JasperParserBaseListener {
 
     @Override
     public void enterWhileLoop(JasperParser.WhileLoopContext ctx) {
+        symbolTable.addSymbol(new BlockSymbol("while", ctx));
         symbolTable.enterScope();
     }
 
@@ -144,6 +133,7 @@ public class SymbolListener extends JasperParserBaseListener {
 
     @Override
     public void enterIfStatement(JasperParser.IfStatementContext ctx) {
+        symbolTable.addSymbol(new BlockSymbol("if", ctx));
         symbolTable.enterScope();
     }
 
@@ -154,6 +144,8 @@ public class SymbolListener extends JasperParserBaseListener {
 
     @Override
     public void enterElseIfStatement(JasperParser.ElseIfStatementContext ctx) {
+        var blockSymbol = new BlockSymbol("else-if", ctx);
+        symbolTable.addSymbol(blockSymbol);
         symbolTable.enterScope();
     }
 
@@ -164,6 +156,8 @@ public class SymbolListener extends JasperParserBaseListener {
 
     @Override
     public void enterElseStatement(JasperParser.ElseStatementContext ctx) {
+        var blockSymbol = new BlockSymbol("else", ctx);
+        symbolTable.addSymbol(blockSymbol);
         symbolTable.enterScope();
     }
 

@@ -1,6 +1,6 @@
 package io.github.bbrown683.jasper.antlr4;
 
-import io.github.bbrown683.jasper.symbol.Scope;
+import io.github.bbrown683.jasper.symbol.v1.Scope;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Map;

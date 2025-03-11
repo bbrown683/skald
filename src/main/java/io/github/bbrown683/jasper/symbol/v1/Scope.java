@@ -1,6 +1,4 @@
-package io.github.bbrown683.jasper.symbol;
-
-import lombok.Getter;
+package io.github.bbrown683.jasper.symbol.v1;
 
 import java.util.HashMap;
 import java.util.Map;

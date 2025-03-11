@@ -1,22 +1,18 @@
-package io.github.bbrown683.jasper.symbol;
+package io.github.bbrown683.jasper.symbol.v1;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.bcel.generic.Type;
 
 @Getter
-@Setter
 public class VariableSymbol extends Symbol {
-    private Type type;
-    private boolean isPublic;
-    private boolean isStatic;
-    private boolean isMutable;
-    private boolean isArray;
-    private boolean isParameter;
-    private boolean isLiteral;
-    private Object value;
+    private final Type type;
+    private final boolean isPublic;
+    private final boolean isStatic;
+    private final boolean isMutable;
+    private final boolean isArray;
+    private final boolean isParameter;
+    private final boolean isLiteral;
+    private final Object value;
 
     public VariableSymbol(String name, Type type, boolean isPublic, boolean isStatic, boolean isMutable, boolean isArray, boolean isParameter, boolean isLiteral, Object value) {
         super(name);
