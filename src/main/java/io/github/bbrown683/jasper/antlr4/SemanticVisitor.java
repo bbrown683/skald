@@ -1,48 +1,46 @@
 package io.github.bbrown683.jasper.antlr4;
 
-import io.github.bbrown683.jasper.symbol.v1.Scope;
+import io.github.bbrown683.jasper.symbol.Symbol;
+import io.github.bbrown683.jasper.symbol.SymbolTable;
 import org.antlr.v4.runtime.ParserRuleContext;
-
-import java.util.Map;
-import java.util.Stack;
 
 public class SemanticVisitor extends JasperParserBaseVisitor<Void> {
     private String className;
-    private Map<ParserRuleContext,Stack<Scope>> contextScopes;
+    private SymbolTable symbolTable;
 
-    public SemanticVisitor(String className, Map<ParserRuleContext, Stack<Scope>> contextScopes) {
+    public SemanticVisitor(String className, SymbolTable symbolTable) {
         this.className = className;
-        this.contextScopes = contextScopes;
+        this.symbolTable = symbolTable;
     }
 
-    Stack<Scope> getScope(ParserRuleContext ctx) {
-        var scope = contextScopes.get(ctx);
-        if (scope == null) {
-            System.out.println("Scope not found");
+    Symbol getSymbol(ParserRuleContext ctx) {
+        var symbol = symbolTable.getSymbol(ctx);
+        if (symbol == null) {
+            System.out.println("Symbol not found for " + ctx.getText());
         } else {
-            System.out.println(scope);
+            System.out.println(symbol.getName());
         }
-        return scope;
+        return symbol;
     }
 
     @Override
     public Void visitClassFile(JasperParser.ClassFileContext ctx) {
-        var scope = getScope(ctx);
+        var symbol = getSymbol(ctx);
         visitChildren(ctx);
         return null;
     }
 
     @Override
     public Void visitFunction(JasperParser.FunctionContext ctx) {
-        var scope = getScope(ctx);
+        var symbol = getSymbol(ctx);
         visitChildren(ctx);
         return null;
     }
 
     @Override
     public Void visitVariable(JasperParser.VariableContext ctx) {
-        System.out.println(ctx.getText());
-        var scope = getScope(ctx);
+        var symbol = getSymbol(ctx);
+        var visibleSymbols = symbol.getVisibleSymbols();
         visitChildren(ctx);
         return null;
     }

@@ -1,23 +1,26 @@
 package io.github.bbrown683.jasper.symbol;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.apache.bcel.generic.Type;
 
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class SymbolTable2 {
-    private final Map<ParserRuleContext,Symbol2> symbolMap = new HashMap<>();
-    private Symbol2 currentSymbol;
-    private Symbol2 previousSymbol;
+public class SymbolTable {
+    private final Map<ParserRuleContext,Symbol> symbolMap = new HashMap<>();
+    private Symbol currentSymbol;
+    private Symbol previousSymbol;
 
-    public SymbolTable2(Symbol2 rootSymbol) {
+    public SymbolTable(Symbol rootSymbol) {
         currentSymbol = rootSymbol;
         symbolMap.put(currentSymbol.getCtx(), currentSymbol);
+        loadBuiltInTypes();
     }
 
     // Goes down a level in the symbol table
     public void enterScope() {
-//        currentSymbol = symbol;
         currentSymbol = previousSymbol;
     }
 
@@ -27,15 +30,13 @@ public class SymbolTable2 {
     }
 
     // Adds a symbol at the current level in the symbol table
-    public void addSymbol(Symbol2 symbol) {
-//        symbol.parent = currentSymbol;
-//        currentSymbol.getChildren().add(symbol);
+    public void addSymbol(Symbol symbol) {
         currentSymbol.addChild(symbol);
         symbolMap.put(symbol.getCtx(), symbol);
         previousSymbol = symbol;
     }
 
-    public Symbol2 getSymbol(ParserRuleContext ctx) {
+    public Symbol getSymbol(ParserRuleContext ctx) {
         return symbolMap.get(ctx);
     }
 

@@ -1,5 +1,4 @@
 import io.github.bbrown683.jasper.antlr4.*;
-import io.github.bbrown683.jasper.symbol.v1.GlobalSymbolTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -26,17 +25,15 @@ public class LangTestCases extends ClassLoader {
         var parser = new JasperParser(new CommonTokenStream(lexer));
         var classFileContext = parser.classFile();
 
-        var symbolListener = new SymbolListener2(className);
+        var symbolListener = new SymbolListener(className);
 
         ParseTreeWalker walker = new ParseTreeWalker();
         walker.walk(symbolListener, classFileContext);
 
         var symbolTable = symbolListener.getSymbolTable();
 
-        //var contextScope = symbolListener.getContextScopes();
-
-        //var semanticVisitor = new SemanticVisitor(className, contextScope);
-        //semanticVisitor.visitClassFile(classFileContext);
+        var semanticVisitor = new SemanticVisitor(className, symbolTable);
+        semanticVisitor.visitClassFile(classFileContext);
 
         //var visitor = new CompilerVisitor(className);
         return;
