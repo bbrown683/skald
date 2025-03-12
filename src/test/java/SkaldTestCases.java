@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class LangTestCases extends ClassLoader {
+public class SkaldTestCases extends ClassLoader {
 
     private InputStream loadFile(String fileName) {
         ClassLoader classLoader = getClass().getClassLoader();
@@ -22,8 +22,8 @@ public class LangTestCases extends ClassLoader {
 
     private void visit(String className, InputStream inputStream) throws IOException {
         CharStream charStream = CharStreams.fromStream(inputStream);
-        var lexer = new JasperLexer(charStream);
-        var parser = new JasperParser(new CommonTokenStream(lexer));
+        var lexer = new SkaldLexer(charStream);
+        var parser = new SkaldParser(new CommonTokenStream(lexer));
         var classFileContext = parser.classFile();
 
         var symbolListener = new SymbolListener(className);

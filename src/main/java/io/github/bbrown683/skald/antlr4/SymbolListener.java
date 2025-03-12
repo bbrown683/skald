@@ -8,7 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
 
-public class SymbolListener extends JasperParserBaseListener {
+public class SymbolListener extends SkaldParserBaseListener {
     @Getter
     private SymbolTable symbolTable;
     private final String className;
@@ -63,12 +63,12 @@ public class SymbolListener extends JasperParserBaseListener {
     }
 
     @Override
-    public void enterClassFile(JasperParser.ClassFileContext ctx) {
+    public void enterClassFile(SkaldParser.ClassFileContext ctx) {
         symbolTable = new SymbolTable(new ClassFileSymbol(className, ctx));
     }
 
     @Override
-    public void enterFunction(JasperParser.FunctionContext ctx) {
+    public void enterFunction(SkaldParser.FunctionContext ctx) {
         var functionName = ctx.IDENTIFIER().getText();
         var typeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
 
@@ -80,12 +80,12 @@ public class SymbolListener extends JasperParserBaseListener {
     }
 
     @Override
-    public void exitFunction(JasperParser.FunctionContext ctx) {
+    public void exitFunction(SkaldParser.FunctionContext ctx) {
         symbolTable.exitScope();
     }
 
     @Override
-    public void enterFunctionParameter(JasperParser.FunctionParameterContext ctx) {
+    public void enterFunctionParameter(SkaldParser.FunctionParameterContext ctx) {
         var variableName = ctx.IDENTIFIER().getText();
         var typeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
 
@@ -96,7 +96,7 @@ public class SymbolListener extends JasperParserBaseListener {
     }
 
     @Override
-    public void enterVariable(JasperParser.VariableContext ctx) {
+    public void enterVariable(SkaldParser.VariableContext ctx) {
         var variableName = ctx.IDENTIFIER().getText();
         var typeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
 
@@ -110,57 +110,57 @@ public class SymbolListener extends JasperParserBaseListener {
     }
 
     @Override
-    public void enterForLoop(JasperParser.ForLoopContext ctx) {
+    public void enterForLoop(SkaldParser.ForLoopContext ctx) {
         symbolTable.addSymbol(new BlockSymbol("for", ctx));
         symbolTable.enterScope();
     }
 
     @Override
-    public void exitForLoop(JasperParser.ForLoopContext ctx) {
+    public void exitForLoop(SkaldParser.ForLoopContext ctx) {
         symbolTable.exitScope();
     }
 
     @Override
-    public void enterWhileLoop(JasperParser.WhileLoopContext ctx) {
+    public void enterWhileLoop(SkaldParser.WhileLoopContext ctx) {
         symbolTable.addSymbol(new BlockSymbol("while", ctx));
         symbolTable.enterScope();
     }
 
     @Override
-    public void exitWhileLoop(JasperParser.WhileLoopContext ctx) {
+    public void exitWhileLoop(SkaldParser.WhileLoopContext ctx) {
         symbolTable.exitScope();
     }
 
     @Override
-    public void enterIfStatement(JasperParser.IfStatementContext ctx) {
+    public void enterIfStatement(SkaldParser.IfStatementContext ctx) {
         symbolTable.addSymbol(new BlockSymbol("if", ctx));
         symbolTable.enterScope();
     }
 
     @Override
-    public void exitIfStatement(JasperParser.IfStatementContext ctx) {
+    public void exitIfStatement(SkaldParser.IfStatementContext ctx) {
         symbolTable.exitScope();
     }
 
     @Override
-    public void enterElseIfStatement(JasperParser.ElseIfStatementContext ctx) {
+    public void enterElseIfStatement(SkaldParser.ElseIfStatementContext ctx) {
         symbolTable.addSymbol(new BlockSymbol("else-if", ctx));
         symbolTable.enterScope();
     }
 
     @Override
-    public void exitElseIfStatement(JasperParser.ElseIfStatementContext ctx) {
+    public void exitElseIfStatement(SkaldParser.ElseIfStatementContext ctx) {
         symbolTable.exitScope();
     }
 
     @Override
-    public void enterElseStatement(JasperParser.ElseStatementContext ctx) {
+    public void enterElseStatement(SkaldParser.ElseStatementContext ctx) {
         symbolTable.addSymbol(new BlockSymbol("else", ctx));
         symbolTable.enterScope();
     }
 
     @Override
-    public void exitElseStatement(JasperParser.ElseStatementContext ctx) {
+    public void exitElseStatement(SkaldParser.ElseStatementContext ctx) {
         symbolTable.exitScope();
     }
 }

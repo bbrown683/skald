@@ -4,7 +4,7 @@ import io.github.bbrown683.skald.symbol.Symbol;
 import io.github.bbrown683.skald.symbol.SymbolTable;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-public class SemanticVisitor extends JasperParserBaseVisitor<Void> {
+public class SemanticVisitor extends SkaldParserBaseVisitor<Void> {
     private String className;
     private SymbolTable symbolTable;
 
@@ -24,21 +24,21 @@ public class SemanticVisitor extends JasperParserBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitClassFile(JasperParser.ClassFileContext ctx) {
+    public Void visitClassFile(SkaldParser.ClassFileContext ctx) {
         var symbol = getSymbol(ctx);
         visitChildren(ctx);
         return null;
     }
 
     @Override
-    public Void visitFunction(JasperParser.FunctionContext ctx) {
+    public Void visitFunction(SkaldParser.FunctionContext ctx) {
         var symbol = getSymbol(ctx);
         visitChildren(ctx);
         return null;
     }
 
     @Override
-    public Void visitVariable(JasperParser.VariableContext ctx) {
+    public Void visitVariable(SkaldParser.VariableContext ctx) {
         var symbol = getSymbol(ctx);
         var visibleSymbols = symbol.getVisibleSymbols();
         visitChildren(ctx);

@@ -13,7 +13,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.FileOutputStream;
 import java.util.*;
 
-public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
+public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
     private final String className;
     private ClassGen classGen;
     private ConstantPoolGen constantPoolGen;
@@ -42,7 +42,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public byte[] visitClassFile(JasperParser.ClassFileContext ctx) {
+    public byte[] visitClassFile(SkaldParser.ClassFileContext ctx) {
         // Initialize with empty name until package is visited
         classGen = new ClassGen(className,
                 "java.lang.Object",
@@ -56,15 +56,15 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
         instructionUtil = new InstructionUtil(classGen, constantPoolGen);
 
         // Create empty constructor.
-        var constructorCtx = new JasperParser.FunctionContext(null, -1);
+        var constructorCtx = new SkaldParser.FunctionContext(null, -1);
         constructorCtx.start = ctx.start;
         constructorCtx.stop = ctx.stop;
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.FUNCTION, "fn")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.IDENTIFIER, "new")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.LEFT_PAREN, "(")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.RIGHT_PAREN, ")")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.LEFT_BRACE, "{")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(JasperParser.RIGHT_BRACE, "}")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.FUNCTION, "fn")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.IDENTIFIER, "new")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.LEFT_PAREN, "(")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.RIGHT_PAREN, ")")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.LEFT_BRACE, "{")));
+        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.RIGHT_BRACE, "}")));
         visitFunction(constructorCtx, ctx.variable());
 
         var functions = ctx.function();
@@ -80,7 +80,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitPackagePath(JasperParser.PackagePathContext ctx) {
+    public Object visitPackagePath(SkaldParser.PackagePathContext ctx) {
         String path = ctx.path().getText();
         classGen.setClassName(path + "." + className);
         System.out.println("Package: " + path);
@@ -88,19 +88,19 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitImportPath(JasperParser.ImportPathContext ctx) {
+    public Object visitImportPath(SkaldParser.ImportPathContext ctx) {
         String path = ctx.path().getText();
         System.out.println("Import: " + path);
         return path;
     }
 
     @Override
-    public Object visitPath(JasperParser.PathContext ctx) {
+    public Object visitPath(SkaldParser.PathContext ctx) {
         return ctx.getText();
     }
 
     @Override
-    public Pair<String,Type> visitFunctionParameter(JasperParser.FunctionParameterContext ctx) {
+    public Pair<String,Type> visitFunctionParameter(SkaldParser.FunctionParameterContext ctx) {
         var identifierName = ctx.IDENTIFIER().getText();
         var typeName = visitTypeName(ctx.typeName());
 
@@ -118,7 +118,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
         return Pair.of(identifierName, getType(typeName));
     }
 
-    public Object visitFunction(JasperParser.FunctionContext ctx, List<JasperParser.VariableContext> fieldVariables) {
+    public Object visitFunction(SkaldParser.FunctionContext ctx, List<SkaldParser.VariableContext> fieldVariables) {
         String functionName = ctx.IDENTIFIER().getText();
         String returnTypeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
         System.out.println("===================================");
@@ -138,7 +138,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
 
         boolean isConstructor = functionName.equals("new");
         int isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
-        int isStatic = ctx.STATIC() != null || ctx.parent instanceof JasperParser.ClassFileContext ? Const.ACC_STATIC : 0;
+        int isStatic = ctx.STATIC() != null || ctx.parent instanceof SkaldParser.ClassFileContext ? Const.ACC_STATIC : 0;
 
         var methodGen = new MethodGen(isPublic | isStatic,
                 returnType,
@@ -191,11 +191,11 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFunction(JasperParser.FunctionContext ctx) {
+    public Object visitFunction(SkaldParser.FunctionContext ctx) {
         return visitFunction(ctx, null);
     }
 
-    public Object visitVariable(JasperParser.VariableContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitVariable(SkaldParser.VariableContext ctx, Map<ExpressionParameter, Object> parameters) {
         System.out.println("-----------------------------------");
         String variableName = ctx.IDENTIFIER().getText();
 
@@ -250,12 +250,12 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitVariable(JasperParser.VariableContext ctx) {
+    public Object visitVariable(SkaldParser.VariableContext ctx) {
         return visitVariable(ctx, Collections.emptyMap());
     }
 
     @Override
-    public Object visitFunctionCallArgument(JasperParser.FunctionCallArgumentContext ctx) {
+    public Object visitFunctionCallArgument(SkaldParser.FunctionCallArgumentContext ctx) {
         var literals = ctx.literals();
         if(literals != null) {
             Object literal = visitLiterals(literals);
@@ -275,7 +275,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFunctionCall(JasperParser.FunctionCallContext ctx) {
+    public Object visitFunctionCall(SkaldParser.FunctionCallContext ctx) {
         System.out.println("-----------------------------------");
         String reference = visitReference(ctx.reference());
 
@@ -292,7 +292,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
 
-    public Object visitExpression(JasperParser.ExpressionContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitExpression(SkaldParser.ExpressionContext ctx, Map<ExpressionParameter, Object> parameters) {
         if (ctx.variable() != null) {
             return visitVariable(ctx.variable(), parameters);
         }
@@ -303,12 +303,12 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitExpression(JasperParser.ExpressionContext ctx) {
+    public Object visitExpression(SkaldParser.ExpressionContext ctx) {
         return visitExpression(ctx, Collections.emptyMap());
     }
 
     @Override
-    public Object visitLiterals(JasperParser.LiteralsContext ctx) {
+    public Object visitLiterals(SkaldParser.LiteralsContext ctx) {
         var integerLiteral = ctx.INTEGER_LITERAL();
         if (integerLiteral != null) {
             String number = integerLiteral.getText();
@@ -342,7 +342,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public String visitTypeName(JasperParser.TypeNameContext ctx) {
+    public String visitTypeName(SkaldParser.TypeNameContext ctx) {
         if(ctx == null) {
             return "";
         }
@@ -350,7 +350,7 @@ public class CompilerVisitor extends JasperParserBaseVisitor<Object> {
     }
 
     @Override
-    public String visitReference(JasperParser.ReferenceContext ctx) {
+    public String visitReference(SkaldParser.ReferenceContext ctx) {
         return ctx.getText();
     }
 
