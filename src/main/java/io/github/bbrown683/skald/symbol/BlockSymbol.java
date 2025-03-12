@@ -1,4 +1,4 @@
-package io.github.bbrown683.jasper.symbol;
+package io.github.bbrown683.skald.symbol;
 
 import lombok.Getter;
 import lombok.ToString;

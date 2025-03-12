@@ -1,6 +1,6 @@
-parser grammar JasperParser;
+parser grammar SkaldParser;
 
-options { tokenVocab=JasperLexer; }
+options { tokenVocab=SkaldLexer; }
 
 classFile
     : packagePath? importPath*

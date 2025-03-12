@@ -1,4 +1,4 @@
-package io.github.bbrown683.jasper.reference;
+package io.github.bbrown683.skald.reference;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,5 +1,5 @@
-import io.github.bbrown683.jasper.antlr4.*;
-import io.github.bbrown683.jasper.reference.ReferenceTable;
+import io.github.bbrown683.skald.antlr4.*;
+import io.github.bbrown683.skald.reference.ReferenceTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;

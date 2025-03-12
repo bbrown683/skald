@@ -1,6 +1,6 @@
-package io.github.bbrown683.jasper.antlr4;
+package io.github.bbrown683.skald.antlr4;
 
-import io.github.bbrown683.jasper.symbol.*;
+import io.github.bbrown683.skald.symbol.*;
 import lombok.Getter;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;

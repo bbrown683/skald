@@ -1,4 +1,4 @@
-package io.github.bbrown683.jasper.jvm;
+package io.github.bbrown683.skald.jvm;
 
 import org.apache.bcel.generic.*;
 

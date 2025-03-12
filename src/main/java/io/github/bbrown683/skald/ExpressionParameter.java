@@ -1,4 +1,4 @@
-package io.github.bbrown683.jasper;
+package io.github.bbrown683.skald;
 
 public enum ExpressionParameter {
     METHOD,

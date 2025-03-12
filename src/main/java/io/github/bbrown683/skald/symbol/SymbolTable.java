@@ -1,4 +1,4 @@
-package io.github.bbrown683.jasper.symbol;
+package io.github.bbrown683.skald.symbol;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 

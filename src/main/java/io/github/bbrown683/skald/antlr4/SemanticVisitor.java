@@ -1,7 +1,7 @@
-package io.github.bbrown683.jasper.antlr4;
+package io.github.bbrown683.skald.antlr4;
 
-import io.github.bbrown683.jasper.symbol.Symbol;
-import io.github.bbrown683.jasper.symbol.SymbolTable;
+import io.github.bbrown683.skald.symbol.Symbol;
+import io.github.bbrown683.skald.symbol.SymbolTable;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 public class SemanticVisitor extends JasperParserBaseVisitor<Void> {
