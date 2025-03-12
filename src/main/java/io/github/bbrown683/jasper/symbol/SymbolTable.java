@@ -1,11 +1,8 @@
 package io.github.bbrown683.jasper.symbol;
 
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.apache.bcel.generic.Type;
 
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class SymbolTable {
@@ -16,7 +13,6 @@ public class SymbolTable {
     public SymbolTable(Symbol rootSymbol) {
         currentSymbol = rootSymbol;
         symbolMap.put(currentSymbol.getCtx(), currentSymbol);
-        loadBuiltInTypes();
     }
 
     // Goes down a level in the symbol table

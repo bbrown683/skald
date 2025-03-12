@@ -1,4 +1,5 @@
 import io.github.bbrown683.jasper.antlr4.*;
+import io.github.bbrown683.jasper.reference.ReferenceTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -53,6 +54,7 @@ public class LangTestCases extends ClassLoader {
 
     @Test
     public void test2() {
-
+        ReferenceTable referenceTable = new ReferenceTable();
+        var reference = referenceTable.getReference("Integer");
     }
 }

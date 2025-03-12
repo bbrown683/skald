@@ -1,60 +1,34 @@
 package io.github.bbrown683.jasper.reference;
 
-import io.github.bbrown683.jasper.symbol.FunctionSymbol;
-import io.github.bbrown683.jasper.symbol.TypeSymbol;
-import io.github.bbrown683.jasper.symbol.VariableSymbol;
-import org.apache.bcel.generic.Type;
-
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ReferenceTable {
-    private Map<String,TypeReference> referenceMap = new HashMap<>();
+    private final ReferenceLoader referenceLoader = new ReferenceLoader();
+    private final Map<String,Map<String,Reference>> referenceMap = new HashMap<>();
 
-    public TypeReference getReference(String name) {
-        
+    public ReferenceTable() {
+        // Add the java.lang package by default as it is always imported by the JVM
+        addImport("java.lang");
     }
 
-    private void loadBuiltInTypes() {
-        List<String> builtInTypes = List.of("Integer");
-        for (String type : builtInTypes) {
-            loadBuiltInType(type);
+    public void addImport(String packagePath) {
+        if(referenceMap.containsKey(packagePath)) {
+            return;
         }
+        referenceMap.put(packagePath, referenceLoader.getReferences(packagePath));
     }
 
-    private void loadBuiltInType(String type) {
-        try {
-            Class<?> clazz = Class.forName("java.lang." + type);
-            var typeSymbol = new TypeSymbol(clazz.getSimpleName(), null, clazz.getPackageName(), true, true);
-            for(var fields : clazz.getFields()) {
-                var fieldName = fields.getName();
-                var fieldType = fields.getType();
-                var isPublic = Modifier.isPublic(fields.getModifiers());
-                var isStatic = Modifier.isStatic(fields.getModifiers());
-                var isMutable = !Modifier.isFinal(fields.getModifiers());
-                var isArray = fields.getType().isArray();
-                typeSymbol.addChild(new VariableSymbol(fieldName, null, Type.getType(fieldType), isPublic, isStatic, isMutable, isArray, false, false, null));
-            }
-
-            for(var method : clazz.getMethods()) {
-                var methodName = method.getName();
-                var returnType = method.getReturnType();
-                var isPublic = Modifier.isPublic(method.getModifiers());
-                var isStatic = Modifier.isStatic(method.getModifiers());
-
-                typeSymbol.addChild(new FunctionSymbol(methodName, null, Type.getType(returnType), isPublic, isStatic));
-
-                for(var parameter : method.getParameters()) {
-                    var parameterName = parameter.getName();
-                    var parameterType = parameter.getType();
-                    var isArray = parameter.getType().isArray();
-                    typeSymbol.addChild(new VariableSymbol(parameterName, null, Type.getType(parameterType), isPublic, isStatic, true, isArray, true, false, null));
+    public Reference getReference(String name) {
+        var reference = referenceMap.get(name);
+        if(reference == null) {
+            for(var importPath : referenceMap.keySet()) {
+                reference = referenceMap.get(importPath + "." + name);
+                if(reference != null) {
+                    break;
                 }
             }
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
         }
+        return null;
     }
 }

@@ -47,9 +47,9 @@ public abstract class Symbol {
         List<Symbol> visibleSymbols = new ArrayList<>();
         var symbol = this;
         while (symbol != null) {
-            var parent = symbol.getParent();
+            var parent = symbol.parent;
             if(parent != null) { // Scan under parent for symbols
-                var parentChildren = parent.getChildren();
+                var parentChildren = parent.children;
                 // Check for symbols before the current symbol in the parent's children list
                 var symbolIndex = parentChildren.indexOf(symbol);
                 for(int i = 0; i < symbolIndex; i++) {
@@ -58,7 +58,7 @@ public abstract class Symbol {
                         visibleSymbols.add(sibling);
                 }
             } else { // Add symbols from the root symbol
-                for(var child : symbol.getChildren()) {
+                for(var child : symbol.children) {
                     if (child != this && !(child instanceof BlockSymbol) && !visibleSymbols.contains(child))
                         visibleSymbols.add(child);
                 }

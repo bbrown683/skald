@@ -1,13 +1,22 @@
 package io.github.bbrown683.jasper.reference;
 
-import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.apache.bcel.generic.Type;
 
 import java.util.List;
 
-public record FunctionReference(String name,
-    Type returnType,
-    boolean isPublic,
-    boolean isStatic,
-    boolean isMutable,
-    List<VariableReference> parameters) {}
+@Getter
+public class FunctionReference extends Reference {
+    private final Type returnType;
+    private final List<VariableReference> parameters;
+
+    public FunctionReference(String name,
+                             boolean isPublic,
+                             boolean isStatic,
+                             Type returnType,
+                             List<VariableReference> parameters) {
+        super(name, isPublic, isStatic);
+        this.returnType = returnType;
+        this.parameters = parameters;
+    }
+}

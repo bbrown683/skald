@@ -1,14 +1,27 @@
 package io.github.bbrown683.jasper.reference;
 
+import lombok.Getter;
+
 import java.util.List;
 
-public record TypeReference(
-    String name,
-    String packagePath,
-    boolean isPublic,
-    boolean isStatic,
-    boolean isMutable,
-    List<VariableReference> fields,
-    List<FunctionReference> functions,
-    List<TypeReference> subtypes
-) {}
+@Getter
+public class TypeReference extends Reference {
+    private final List<VariableReference> fields;
+    private final List<FunctionReference> functions;
+    private final List<TypeReference> subTypes;
+    private final String superType;
+
+    public TypeReference(String name,
+                         boolean isPublic,
+                         boolean isStatic,
+                         List<VariableReference> fields,
+                         List<FunctionReference> functions,
+                         List<TypeReference> subTypes,
+                         String superType) {
+        super(name, isPublic, isStatic);
+        this.fields = fields;
+        this.functions = functions;
+        this.subTypes = subTypes;
+        this.superType = superType;
+    }
+}
