@@ -37,6 +37,7 @@ build/
 ### Mac OS ###
 .DS_Store
 
-## ANTLR ##
-gen/
+## Custom ###
+*.idea
 *.class
+gen/
