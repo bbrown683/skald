@@ -53,7 +53,8 @@ public class ReferenceLoader extends ClassLoader {
         var classes = new ArrayList<Class<?>>();
 
         FileSystem filesystem = FileSystems.getFileSystem(URI.create("jrt:/"));
-        var path = filesystem.getPath("modules","java.base", packagePath.replace(".", "/"));
+        String classesPath = packagePath.replace(".", "/");
+        var path = filesystem.getPath("modules","java.base", classesPath);
         // Get all files under the path
         try (var stream = Files.walk(path)) {
             var classNames = stream
@@ -88,7 +89,6 @@ public class ReferenceLoader extends ClassLoader {
     private List<Path> getExternalClassPaths(String packagePath) {
         return Collections.emptyList();
     }
-
 
     private byte[] getClassBytes(Path path) {
         try {

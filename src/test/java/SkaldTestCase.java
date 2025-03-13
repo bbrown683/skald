@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class SkaldTestCases extends ClassLoader {
-
+public class SkaldTestCase {
     private InputStream loadFile(String fileName) {
         ClassLoader classLoader = getClass().getClassLoader();
         var inputStream = classLoader.getResourceAsStream(fileName);
@@ -26,12 +25,10 @@ public class SkaldTestCases extends ClassLoader {
         var parser = new SkaldParser(new CommonTokenStream(lexer));
         var classFileContext = parser.classFile();
 
-        var symbolListener = new SymbolListener(className);
+        var symbolVisitor = new SymbolVisitor(className);
+        symbolVisitor.visit(classFileContext);
 
-        ParseTreeWalker walker = new ParseTreeWalker();
-        walker.walk(symbolListener, classFileContext);
-
-        var symbolTable = symbolListener.getSymbolTable();
+        var symbolTable = symbolVisitor.getSymbolTable();
 
         var semanticVisitor = new SemanticVisitor(className, symbolTable);
         semanticVisitor.visitClassFile(classFileContext);
