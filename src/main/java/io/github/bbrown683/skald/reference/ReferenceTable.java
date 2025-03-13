@@ -1,5 +1,7 @@
 package io.github.bbrown683.skald.reference;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,10 +20,10 @@ public class ReferenceTable {
 
         boolean isPackage = importPath.endsWith(".*");
         if (isPackage) { // Strip the .* from the end of the package path
-            packagePath = importPath.substring(0, importPath.lastIndexOf(".*"));
+            packagePath = StringUtils.substringBefore(importPath, ".*");
             path = packagePath;
         } else { // Strip the class name from the end of the package path
-            packagePath = importPath.substring(0, importPath.lastIndexOf("."));
+            packagePath = StringUtils.substringBeforeLast(importPath, ".");
             path = importPath;
         }
 
@@ -33,13 +35,27 @@ public class ReferenceTable {
         }
     }
 
-    public Reference getReference(String name) {
-        var reference = referenceMap.get(name);
-        if(reference == null) {
-            for(var importPath : referenceMap.keySet()) {
-                reference = referenceMap.get(importPath + "." + name);
-                if(reference != null) {
-                    break;
+    public Reference getReference(String packagePath, String referenceName, ReferenceSearchType searchType, String referenceParent) {
+        var packageReferences = referenceMap.get(packagePath);
+        if(packageReferences != null) {
+            if(searchType == ReferenceSearchType.TYPE) {
+                return packageReferences.get(referenceName);
+            } else {
+                var reference = packageReferences.get(referenceParent);
+                if(reference instanceof TypeReference typeReference) {
+                    if (searchType == ReferenceSearchType.FIELD) {
+                        for (var field : typeReference.getFields()) {
+                            if (field.getName().equals(referenceName)) {
+                                return field;
+                            }
+                        }
+                    } else if (searchType == ReferenceSearchType.FUNCTION) {
+                        for (var function : typeReference.getFunctions()) {
+                            if (function.getName().equals(referenceName)) {
+                                return function;
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -1,12 +1,8 @@
 package io.github.bbrown683.skald.symbol;
 
-import lombok.Getter;
-import lombok.ToString;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.bcel.generic.Type;
 
-@Getter
-@ToString
 public class FunctionSymbol extends Symbol {
     private final Type returnType;
     private final boolean isPublic;
@@ -17,5 +13,17 @@ public class FunctionSymbol extends Symbol {
         this.returnType = returnType;
         this.isPublic = isPublic;
         this.isStatic = isStatic;
+    }
+
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
     }
 }

@@ -1,7 +1,7 @@
 package io.github.bbrown683.skald.antlr4;
 
+import io.github.bbrown683.skald.reference.ReferenceTable;
 import io.github.bbrown683.skald.symbol.*;
-import lombok.Getter;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 import org.apache.commons.lang3.tuple.Pair;
@@ -9,12 +9,20 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.List;
 
 public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
-    @Getter
     private SymbolTable symbolTable;
+    private final ReferenceTable referenceTable = new ReferenceTable();
     private final String className;
 
     public SymbolVisitor(String className) {
         this.className = className;
+    }
+
+    public SymbolTable getSymbolTable() {
+        return symbolTable;
+    }
+
+    public ReferenceTable getReferenceTable() {
+        return referenceTable;
     }
 
     @Override
@@ -22,6 +30,23 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
         symbolTable = new SymbolTable(new ClassFileSymbol(className, ctx));
         visitChildren(ctx);
         return null;
+    }
+
+    @Override
+    public Object visitPackagePath(SkaldParser.PackagePathContext ctx) {
+        referenceTable.addImport(visitPath(ctx.path()) + ".*"); // Add package path to imports
+        return null;
+    }
+
+    @Override
+    public Object visitImportPath(SkaldParser.ImportPathContext ctx) {
+        referenceTable.addImport(visitPath(ctx.path()));
+        return null;
+    }
+
+    @Override
+    public String visitPath(SkaldParser.PathContext ctx) {
+        return ctx.getText();
     }
 
     @Override
@@ -61,10 +86,16 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
         boolean isStatic = ctx.STATIC() != null;
         boolean isMutable = ctx.MUTABLE() != null;
         boolean isArray = ctx.array() != null && !ctx.array().isEmpty();
-        boolean isLiteral = ctx.literals() != null;
 
-        symbolTable.addSymbol(new VariableSymbol(variableName, ctx, getType(typeName), isPublic, isStatic, isMutable, isArray, false, null));
-        visitChildren(ctx);
+        Object value = null;
+        var reference = ctx.reference();
+        var literals = ctx.literals();
+        if (reference != null) {
+            value = visitReference(reference);
+        } else if(literals != null) {
+            value = visitLiterals(ctx.literals());
+        }
+        symbolTable.addSymbol(new VariableSymbol(variableName, ctx, getType(typeName), isPublic, isStatic, isMutable, isArray, false, value));
         return null;
     }
 
@@ -115,7 +146,7 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitReference(SkaldParser.ReferenceContext ctx) {
+    public String visitReference(SkaldParser.ReferenceContext ctx) {
         return ctx.getText();
     }
 

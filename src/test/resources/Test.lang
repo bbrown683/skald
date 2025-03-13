@@ -1,23 +1,8 @@
-import java.lang.reflect.Modifier;
-import java.io.*;
-import java.util.Scanner;
+package language.test;
 
-var testGlobal : byte = 127;
+import java.io.PrintStream;
 
 pub fn main(args: string[]) {
     var helloWorld : string = "Hello, World!";
-    if helloWorld {
-        var testInt : int = 2147483647;
-        for testInt in helloWorld {
-            var testBool : boolean = true;
-        }
-
-        while testInt {
-            mut var testMutableChar : char = 'a';
-        }
-    }
-}
-
-pub fn testFunction(testParameter1: string, testParameter2: string) {
-
+    var helloWorld2 : string = helloWorld;
 }

@@ -227,6 +227,14 @@ public class InstructionUtil {
         instructionList.append(new ALOAD(index));
     }
 
+    public InstructionList loadReference(LocalVariableGen localVariable) {
+        InstructionList instructionList = new InstructionList();
+        int index = localVariable.getIndex();
+        Type type = localVariable.getType();
+        loadReference(instructionList, index);
+        return instructionList;
+    }
+
     public InstructionList loadVariable(LocalVariableGen localVariable) {
         InstructionList instructionList = new InstructionList();
 

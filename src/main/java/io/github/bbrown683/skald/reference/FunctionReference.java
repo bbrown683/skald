@@ -1,11 +1,9 @@
 package io.github.bbrown683.skald.reference;
 
-import lombok.Getter;
 import org.apache.bcel.generic.Type;
 
 import java.util.List;
 
-@Getter
 public class FunctionReference extends Reference {
     private final Type returnType;
     private final List<VariableReference> parameters;
@@ -18,5 +16,13 @@ public class FunctionReference extends Reference {
         super(name, isPublic, isStatic);
         this.returnType = returnType;
         this.parameters = parameters;
+    }
+
+    public Type getReturnType() {
+        return returnType;
+    }
+
+    public List<VariableReference> getParameters() {
+        return parameters;
     }
 }

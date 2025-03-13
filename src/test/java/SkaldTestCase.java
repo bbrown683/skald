@@ -3,7 +3,6 @@ import io.github.bbrown683.skald.reference.ReferenceTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -29,11 +28,13 @@ public class SkaldTestCase {
         symbolVisitor.visit(classFileContext);
 
         var symbolTable = symbolVisitor.getSymbolTable();
+        var referenceTable = symbolVisitor.getReferenceTable();
 
-        var semanticVisitor = new SemanticVisitor(className, symbolTable);
-        semanticVisitor.visitClassFile(classFileContext);
+        //var semanticVisitor = new SemanticVisitor(className, symbolTable);
+        //semanticVisitor.visitClassFile(classFileContext);
 
-        //var visitor = new CompilerVisitor(className);
+        var compilerVisitor = new CompilerVisitor(className, symbolTable, referenceTable);
+        compilerVisitor.visit(classFileContext);
         return;
     }
 
@@ -56,7 +57,5 @@ public class SkaldTestCase {
         referenceTable.addImport("java.lang.reflect.Modifier");
         referenceTable.addImport("java.util.List");
         referenceTable.addImport("java.util.Scanner");
-
-        var reference = referenceTable.getReference("Integer");
     }
 }

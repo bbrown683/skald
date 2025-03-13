@@ -1,19 +1,15 @@
 package io.github.bbrown683.skald.symbol;
 
-import lombok.Getter;
-import lombok.ToString;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@ToString
 public abstract class Symbol {
-    protected String name;
-    protected ParserRuleContext ctx; // The context in the parse tree where this symbol was declared
+    protected final String name;
+    protected final ParserRuleContext ctx; // The context in the parse tree where this symbol was declared
     protected Symbol parent;
-    protected List<Symbol> children = new ArrayList<>();
+    protected final List<Symbol> children = new ArrayList<>();
 
     public Symbol(String name, ParserRuleContext ctx) {
         this.name = name;
@@ -66,5 +62,21 @@ public abstract class Symbol {
             symbol = parent;
         }
         return visibleSymbols;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public ParserRuleContext getCtx() {
+        return ctx;
+    }
+
+    public Symbol getParent() {
+        return parent;
+    }
+
+    public List<Symbol> getChildren() {
+        return children;
     }
 }

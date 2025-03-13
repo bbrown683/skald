@@ -1,11 +1,7 @@
 package io.github.bbrown683.skald.symbol;
 
-import lombok.Getter;
-import lombok.ToString;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-@Getter
-@ToString
 public class TypeSymbol extends Symbol {
     private final String packagePath;
     private final boolean isPublic;
@@ -16,5 +12,17 @@ public class TypeSymbol extends Symbol {
         this.packagePath = packagePath;
         this.isPublic = isPublic;
         this.isStatic = isStatic;
+    }
+
+    public String getPackagePath() {
+        return packagePath;
+    }
+
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
     }
 }

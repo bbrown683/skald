@@ -1,10 +1,12 @@
 package io.github.bbrown683.skald.antlr4;
 
-import io.github.bbrown683.skald.ExpressionParameter;
 import io.github.bbrown683.skald.jvm.InstructionGenerator;
 import io.github.bbrown683.skald.jvm.InstructionUtil;
-import org.antlr.v4.runtime.CommonToken;
-import org.antlr.v4.runtime.tree.TerminalNodeImpl;
+import io.github.bbrown683.skald.reference.ReferenceTable;
+import io.github.bbrown683.skald.symbol.FunctionSymbol;
+import io.github.bbrown683.skald.symbol.Symbol;
+import io.github.bbrown683.skald.symbol.SymbolTable;
+import io.github.bbrown683.skald.symbol.VariableSymbol;
 import org.apache.bcel.Const;
 import org.apache.bcel.generic.*;
 import org.apache.commons.lang3.StringUtils;
@@ -18,31 +20,18 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
     private ClassGen classGen;
     private ConstantPoolGen constantPoolGen;
     private InstructionUtil instructionUtil;
+    private final SymbolTable symbolTable;
+    private final ReferenceTable referenceTable;
+    private final Map<Symbol,LocalVariableGen> localVariables = new HashMap<>();
 
-    public CompilerVisitor(String className) {
+    public CompilerVisitor(String className, SymbolTable symbolTable, ReferenceTable referenceTable) {
         this.className = className;
-    }
-
-    private Type getType(String typeName) {
-        if(typeName == null || typeName.isBlank() || typeName.equals("unit")) {
-            return Type.VOID;
-        }
-        return switch (typeName) {
-            case "byte", "ubyte" -> Type.BYTE;
-            case "short", "ushort" -> Type.SHORT;
-            case "int", "uint" -> Type.INT;
-            case "long", "ulong" -> Type.LONG;
-            case "float" -> Type.FLOAT;
-            case "double" -> Type.DOUBLE;
-            case "char" -> Type.CHAR;
-            case "string" -> Type.STRING;
-            case "boolean" -> Type.BOOLEAN;
-            default -> new ObjectType(typeName);
-        };
+        this.symbolTable = symbolTable;
+        this.referenceTable = referenceTable;
     }
 
     @Override
-    public byte[] visitClassFile(SkaldParser.ClassFileContext ctx) {
+    public Object visitClassFile(SkaldParser.ClassFileContext ctx) {
         // Initialize with empty name until package is visited
         classGen = new ClassGen(className,
                 "java.lang.Object",
@@ -56,6 +45,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         instructionUtil = new InstructionUtil(classGen, constantPoolGen);
 
         // Create empty constructor.
+        /*
         var constructorCtx = new SkaldParser.FunctionContext(null, -1);
         constructorCtx.start = ctx.start;
         constructorCtx.stop = ctx.stop;
@@ -66,11 +56,13 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.LEFT_BRACE, "{")));
         constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.RIGHT_BRACE, "}")));
         visitFunction(constructorCtx, ctx.variable());
+        */
 
         var functions = ctx.function();
         if(functions != null) functions.forEach(this::visitFunction);
 
         var javaClass = classGen.getJavaClass();
+        System.out.println(javaClass);
         try(FileOutputStream fileOutputStream = new FileOutputStream(className + ".class")) {
             javaClass.dump(fileOutputStream);
         } catch (Exception e) {
@@ -81,7 +73,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
 
     @Override
     public Object visitPackagePath(SkaldParser.PackagePathContext ctx) {
-        String path = ctx.path().getText();
+        String path = visitPath(ctx.path());
         classGen.setClassName(path + "." + className);
         System.out.println("Package: " + path);
         return path;
@@ -89,41 +81,39 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
 
     @Override
     public Object visitImportPath(SkaldParser.ImportPathContext ctx) {
-        String path = ctx.path().getText();
+        String path = visitPath(ctx.path());
         System.out.println("Import: " + path);
         return path;
     }
 
     @Override
-    public Object visitPath(SkaldParser.PathContext ctx) {
+    public String visitPath(SkaldParser.PathContext ctx) {
         return ctx.getText();
     }
 
     @Override
     public Pair<String,Type> visitFunctionParameter(SkaldParser.FunctionParameterContext ctx) {
-        var identifierName = ctx.IDENTIFIER().getText();
-        var typeName = visitTypeName(ctx.typeName());
+        var symbol = (VariableSymbol)symbolTable.getSymbol(ctx);
+        var identifierName = symbol.getName();
+        var type = symbol.getType();
 
-        boolean inferredType = false;
-        if (typeName.isBlank()) {
-            inferredType = true;
-            System.out.println("Inferred type");
-        }
-        System.out.println("Parameter: " + identifierName + ", Type: " + typeName);
+        System.out.println("Parameter: " + identifierName + ", Type: " + type);
 
         var array = ctx.array();
         if(array != null) {
-            return Pair.of(identifierName, new ArrayType(getType(typeName), array.size()));
+            return Pair.of(identifierName, new ArrayType(type, array.size()));
         }
-        return Pair.of(identifierName, getType(typeName));
+        return Pair.of(identifierName, type);
     }
 
     public Object visitFunction(SkaldParser.FunctionContext ctx, List<SkaldParser.VariableContext> fieldVariables) {
-        String functionName = ctx.IDENTIFIER().getText();
-        String returnTypeName = ctx.typeName() != null ? ctx.typeName().getText() : "unit";
+        var symbol = (FunctionSymbol)symbolTable.getSymbol(ctx);
+
+        String functionName = symbol.getName();
+        Type returnType = symbol.getReturnType();
         System.out.println("===================================");
         System.out.println("Function: " + functionName);
-        System.out.println("Return: " + returnTypeName);
+        System.out.println("Return: " + returnType);
 
         List<String> parameterNames = new ArrayList<>();
         List<Type> parameterTypes = new ArrayList<>();
@@ -133,12 +123,11 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
             parameterTypes.add(pair.getRight());
         });
 
-        Type returnType = getType(returnTypeName);
-        InstructionList instructionList = new InstructionList();
+        var instructionList = new InstructionList();
 
-        boolean isConstructor = functionName.equals("new");
-        int isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
-        int isStatic = ctx.STATIC() != null || ctx.parent instanceof SkaldParser.ClassFileContext ? Const.ACC_STATIC : 0;
+        var isConstructor = functionName.equals("new");
+        var isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
+        var isStatic = ctx.STATIC() != null || ctx.parent instanceof SkaldParser.ClassFileContext ? Const.ACC_STATIC : 0;
 
         var methodGen = new MethodGen(isPublic | isStatic,
                 returnType,
@@ -149,10 +138,9 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
                 instructionList,
                 constantPoolGen);
 
-        var parameters = new HashMap<ExpressionParameter, Object>();
-        parameters.put(ExpressionParameter.METHOD, methodGen);
-        parameters.put(ExpressionParameter.INSTRUCTION_LIST, instructionList);
-
+        var parameters = new HashMap<Class<?>, Object>();
+        parameters.put(MethodGen.class, methodGen);
+        parameters.put(InstructionList.class, instructionList);
 
         // Field variables are used when we are in a constructor and need to initialize fields.
         if(isConstructor && fieldVariables != null) {
@@ -192,54 +180,71 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunction(SkaldParser.FunctionContext ctx) {
-        return visitFunction(ctx, null);
+        return visitFunction(ctx, Collections.emptyList());
     }
 
-    public Object visitVariable(SkaldParser.VariableContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitVariable(SkaldParser.VariableContext ctx, Map<Class<?>, Object> parameters) {
+        var symbol = (VariableSymbol)symbolTable.getSymbol(ctx);
         System.out.println("-----------------------------------");
-        String variableName = ctx.IDENTIFIER().getText();
+        String variableName = symbol.getName();
+        var isPublic = symbol.isPublic() ? Const.ACC_PUBLIC : 0;
+        var isStatic = symbol.isStatic() ? Const.ACC_STATIC : 0;
+        var isMutable = symbol.isMutable() ? 0 : Const.ACC_FINAL;
+        var type = symbol.getType();
+        var value = symbol.getValue();
 
-        int isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
-        int isStatic = ctx.STATIC() != null ? Const.ACC_STATIC : 0;
-        int isMutable = ctx.MUTABLE() != null ? 0 : Const.ACC_FINAL;
-
-        String typeName = visitTypeName(ctx.typeName());
         System.out.println("Variable: " + variableName +
-                ", Type: " + typeName +
+                ", Type: " + type +
                 ", Public: " + (isPublic == Const.ACC_PUBLIC) +
                 ", Static: " + (isStatic == Const.ACC_STATIC) +
                 ", Mutable: " + (isMutable != Const.ACC_FINAL));
-        Type type = getType(typeName);
 
-        var methodGen = (MethodGen)parameters.get(ExpressionParameter.METHOD);
-        var methodInstructions = (InstructionList)parameters.get(ExpressionParameter.INSTRUCTION_LIST);
+        var methodGen = (MethodGen)parameters.get(MethodGen.class);
+        var methodInstructions = (InstructionList)parameters.get(InstructionList.class);
 
         var variableInstructions = new InstructionList();
         var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen, variableInstructions, methodGen);
 
         // If we are in a constructor, we need to push the reference to the object onto the stack.
-        boolean isConstructor = methodGen.getName().equals("<init>");
+        var isConstructor = methodGen.getName().equals("<init>");
         if(isConstructor) instructionGenerator.callSuper();
 
         var literals = ctx.literals();
         var reference = ctx.reference();
         var expression = ctx.expression();
         if (literals != null) {
-            Object literal = visitLiterals(literals);
-            System.out.println("Literal: " + literal + ", Type: " + literal.getClass().getSimpleName());
+            System.out.println("Literal: " + value + ", Type: " + value.getClass().getSimpleName());
 
             // If we are in a constructor, we need to create a field and store the value in it.
             // Otherwise, we need to create a local variable and store the value in it.
             if(isConstructor) {
-                instructionGenerator.addVariableAsLiteralField(variableName, literal, type, isPublic | isStatic | isMutable, className);
+                instructionGenerator.addVariableAsLiteralField(variableName, value, type, isPublic | isStatic | isMutable, className);
             } else {
-                instructionGenerator.addVariableLiteralAsLiteralLocalVariable(variableName, literal, type);
+                var localVariable = instructionGenerator.addVariableLiteralAsLiteralLocalVariable(variableName, value, type);
+                localVariables.put(symbol, localVariable);
             }
         } else if (reference != null) {
-            String referenceName = visitReference(reference);
-            System.out.println("Reference: " + reference);
+            String referenceName = (String)symbol.getValue();
+            System.out.println("Reference: " + referenceName);
+            // Check symbol table first
+            var visibleSymbols = symbol.getVisibleSymbols();
+            if(visibleSymbols != null) {
+                for (var visibleSymbol : visibleSymbols) {
+                    if (!referenceName.equals(visibleSymbol.getName()) ||
+                            !(visibleSymbol instanceof VariableSymbol variableSymbol)) continue;
 
-            instructionGenerator.addVariableAsReference(referenceName, variableName, type);
+                    if(variableSymbol.isStatic()) {
+                        instructionGenerator.addVariableAsStaticReference(referenceName, variableName, type);
+                    } else {
+                        var localVariable = localVariables.get(variableSymbol);
+                        if(localVariable != null) {
+                            instructionGenerator.addVariableAsReference(variableName, localVariable);
+                        }
+                    }
+                }
+            } else {
+                //referenceTable.getReference();
+            }
         } else if (expression != null) {
             visitExpression(expression, parameters);
         }
@@ -291,8 +296,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         return null;
     }
 
-
-    public Object visitExpression(SkaldParser.ExpressionContext ctx, Map<ExpressionParameter, Object> parameters) {
+    public Object visitExpression(SkaldParser.ExpressionContext ctx, Map<Class<?>, Object> parameters) {
         if (ctx.variable() != null) {
             return visitVariable(ctx.variable(), parameters);
         }
@@ -308,76 +312,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitLiterals(SkaldParser.LiteralsContext ctx) {
-        var integerLiteral = ctx.INTEGER_LITERAL();
-        if (integerLiteral != null) {
-            String number = integerLiteral.getText();
-            return parseIntegerFromString(number);
-        }
-
-        var floatLiteral = ctx.FLOAT_LITERAL();
-        if (floatLiteral != null) {
-            String number = floatLiteral.getText();
-            return parseFloatFromString(number);
-        }
-
-        var stringLiteral = ctx.STRING_LITERAL();
-        if (stringLiteral != null) {
-            String literal = stringLiteral.getText();
-            return literal.replaceAll("\"", "");
-        }
-
-        var charLiteral = ctx.CHAR_LITERAL();
-        if (charLiteral != null) {
-            String literal = charLiteral.getText();
-            return literal.replaceAll("'", "").charAt(0);
-        }
-
-        boolean isTrue = ctx.TRUE() != null;
-        boolean isFalse = ctx.FALSE() != null;
-        if (isTrue) return Boolean.TRUE;
-        else if (isFalse) return Boolean.FALSE;
-
-        return null;
-    }
-
-    @Override
-    public String visitTypeName(SkaldParser.TypeNameContext ctx) {
-        if(ctx == null) {
-            return "";
-        }
-        return ctx.getText();
-    }
-
-    @Override
     public String visitReference(SkaldParser.ReferenceContext ctx) {
         return ctx.getText();
-    }
-
-    private Object parseIntegerFromString(String number) {
-        List<Pair<Class,String>> parseFunctions = List.of(
-                Pair.of(Byte.class, "parseByte"),
-                Pair.of(Short.class, "parseShort"),
-                Pair.of(Integer.class, "parseInt"), // Integer is a special case
-                Pair.of(Long.class, "parseLong")
-        );
-        for (var parseFunction : parseFunctions) {
-            Class clazz = parseFunction.getLeft();
-            String methodName = parseFunction.getRight();
-            try {
-                return clazz.getMethod(methodName, String.class).invoke(null, number);
-            } catch (Exception e) {} // Ignore exception
-        }
-        return null;
-    }
-
-    private Object parseFloatFromString(String number) {
-        List<Class> classes = List.of(Float.class, Double.class);
-        for (var clazz : classes) {
-            try {
-                return clazz.getMethod("parse" + clazz.getSimpleName(), String.class).invoke(null, number);
-            } catch (Exception e) {} // Ignore exception
-        }
-        return null;
     }
 }

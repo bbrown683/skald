@@ -39,7 +39,7 @@ public class InstructionGenerator {
         instructionList.append(instructionUtil.insertField(className, variableName, type));
     }
 
-    public void addVariableLiteralAsLiteralLocalVariable(String variableName, Object literal, Type variableType) {
+    public LocalVariableGen addVariableLiteralAsLiteralLocalVariable(String variableName, Object literal, Type variableType) {
         pushLiteral(literal);
 
         var localVariable = methodGen.addLocalVariable(variableName, variableType, null, null);
@@ -48,9 +48,21 @@ public class InstructionGenerator {
         // Set end so we can determine the scope of the local variable in the method.
         localVariable.setStart(instructionList.getStart());
         localVariable.setEnd(instructionList.getEnd());
+        return localVariable;
     }
 
-    public void addVariableAsReference(String referenceName, String variableName, Type variableType) {
+    public void addVariableAsReference(String variableName, LocalVariableGen referenceVariable) {
+        instructionList.append(instructionUtil.loadReference(referenceVariable));
+
+        var localVariable = methodGen.addLocalVariable(variableName, referenceVariable.getType(), null, null);
+        instructionList.append(instructionUtil.storeVariable(localVariable));
+
+        // Set end so we can determine the scope of the local variable in the method.
+        localVariable.setStart(instructionList.getStart());
+        localVariable.setEnd(instructionList.getEnd());
+    }
+
+    public void addVariableAsStaticReference(String referenceName, String variableName, Type variableType) {
         String className = StringUtils.substringBeforeLast(referenceName, ".");
         String fieldName = StringUtils.substringAfterLast(referenceName, ".");
 
