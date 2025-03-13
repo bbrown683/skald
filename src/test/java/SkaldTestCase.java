@@ -52,6 +52,11 @@ public class SkaldTestCase {
     @Test
     public void test2() {
         ReferenceTable referenceTable = new ReferenceTable();
+        referenceTable.addImport("java.io.*");
+        referenceTable.addImport("java.lang.reflect.Modifier");
+        referenceTable.addImport("java.util.List");
+        referenceTable.addImport("java.util.Scanner");
+
         var reference = referenceTable.getReference("Integer");
     }
 }

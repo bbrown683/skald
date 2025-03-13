@@ -14,22 +14,22 @@ import java.util.function.Predicate;
 public class ReferenceLoader extends ClassLoader {
     private final Map<String,byte[]> referenceMap = new HashMap<>();
 
-    public Map<String,Reference> getReferences(String packagePath) {
+    public Map<String,Reference> getReferences(String importPath, boolean isPackage) {
         var references = new HashMap<String,Reference>();
-        if(packagePath.startsWith("java")) {
-            for(var clazz : getBaseClasses(packagePath)) {
+        if(importPath.startsWith("java")) { // Look at the java.base module
+            for(var clazz : getBaseClasses(importPath, isPackage)) {
                 var reference = getReference(clazz);
                 references.put(reference.getName(), reference);
             }
         } else { // Look at the standard class paths
-            var externalClassPaths = getExternalClassPaths(packagePath);
+            var externalClassPaths = getExternalClassPaths(importPath);
             for(var path : externalClassPaths) {
                 var bytes = getClassBytes(path);
                 if(bytes == null) {
                     continue;
                 }
                 String classFileName = path.getFileName().toString();
-                String filename = packagePath + "." + classFileName.replace(".class", "");
+                String filename = importPath + "." + classFileName.replace(".class", "");
                 referenceMap.put(filename, bytes);
                 try {
                     var clazz = findClass(filename);
@@ -41,7 +41,6 @@ public class ReferenceLoader extends ClassLoader {
             }
         }
 
-
         return references;
     }
 
@@ -49,14 +48,25 @@ public class ReferenceLoader extends ClassLoader {
     // but are instead in the java.base module which is under the JRT filesystem
     // and must be loaded differently. We also cannot create an instance of the class
     // as the java package is prohibited for use.
-    private List<Class<?>> getBaseClasses(String packagePath) {
+    private List<Class<?>> getBaseClasses(String path, boolean isPackage) {
         var classes = new ArrayList<Class<?>>();
 
+        // Update filenames to be in the correct format when searching for classes
+        String classesPath = path.replace(".", "/");
+        var pathDirectory = path.split("\\.");
+
+        String pathParentName;
+        if(!isPackage) {
+            classesPath += ".class";
+            pathParentName = pathDirectory[pathDirectory.length - 2]; // Need to go back an extra layer for single class imports
+        } else {
+            pathParentName = pathDirectory[pathDirectory.length - 1];
+        }
+
         FileSystem filesystem = FileSystems.getFileSystem(URI.create("jrt:/"));
-        String classesPath = packagePath.replace(".", "/");
-        var path = filesystem.getPath("modules","java.base", classesPath);
-        // Get all files under the path
-        try (var stream = Files.walk(path)) {
+        var jrtPath = filesystem.getPath("modules","java.base", classesPath);
+        // Get file(s) under the path
+        try (var stream = Files.walk(jrtPath)) {
             var classNames = stream
                     .filter(Files::isRegularFile)
                     .filter(Predicate.not(Files::isDirectory))
@@ -67,7 +77,7 @@ public class ReferenceLoader extends ClassLoader {
                         // 3. Must be directly under lang package.
                         var filename = f.getFileName().toString();
                         var parentFilename = f.getParent().getFileName().toString();
-                        return filename.endsWith(".class") && !filename.contains("$") && parentFilename.equals("lang");
+                        return filename.endsWith(".class") && !filename.contains("$") && parentFilename.equals(pathParentName);
                     })
                     .map(f -> {
                         var filename = f.toString();

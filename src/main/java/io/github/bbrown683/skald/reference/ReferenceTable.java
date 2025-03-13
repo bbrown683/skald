@@ -9,14 +9,28 @@ public class ReferenceTable {
 
     public ReferenceTable() {
         // Add the java.lang package by default as it is always imported by the JVM
-        addImport("java.lang");
+        addImport("java.lang.*");
     }
 
-    public void addImport(String packagePath) {
-        if(referenceMap.containsKey(packagePath)) {
-            return;
+    public void addImport(String importPath) {
+        String path;
+        String packagePath;
+
+        boolean isPackage = importPath.endsWith(".*");
+        if (isPackage) { // Strip the .* from the end of the package path
+            packagePath = importPath.substring(0, importPath.lastIndexOf(".*"));
+            path = packagePath;
+        } else { // Strip the class name from the end of the package path
+            packagePath = importPath.substring(0, importPath.lastIndexOf("."));
+            path = importPath;
         }
-        referenceMap.put(packagePath, referenceLoader.getReferences(packagePath));
+
+        var references = referenceLoader.getReferences(path, isPackage);
+        if(referenceMap.containsKey(packagePath)) {
+            referenceMap.get(packagePath).putAll(references);
+        } else {
+            referenceMap.put(packagePath, references);
+        }
     }
 
     public Reference getReference(String name) {
