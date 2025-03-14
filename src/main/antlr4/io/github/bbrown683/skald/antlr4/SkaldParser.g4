@@ -18,6 +18,11 @@ array
     : LEFT_BRACKET INTEGER_LITERAL? RIGHT_BRACKET
     ;
 
+constructor
+    : NEW LEFT_PAREN (functionParameter (COMMA functionParameter)*)? RIGHT_PAREN ARROW
+    LEFT_BRACE expression* RIGHT_BRACE
+    ;
+
 function
     : PUBLIC? STATIC? FUNCTION IDENTIFIER
     LEFT_PAREN (functionParameter (COMMA functionParameter)*)? RIGHT_PAREN

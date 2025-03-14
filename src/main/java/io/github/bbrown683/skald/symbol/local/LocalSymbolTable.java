@@ -1,16 +1,16 @@
-package io.github.bbrown683.skald.symbol;
+package io.github.bbrown683.skald.symbol.local;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class SymbolTable {
-    private final Map<ParserRuleContext,Symbol> symbolMap = new HashMap<>();
-    private Symbol currentSymbol;
-    private Symbol previousSymbol;
+public class LocalSymbolTable {
+    private final Map<ParserRuleContext, LocalSymbol> symbolMap = new HashMap<>();
+    private LocalSymbol currentSymbol;
+    private LocalSymbol previousSymbol;
 
-    public SymbolTable(Symbol rootSymbol) {
+    public LocalSymbolTable(LocalSymbol rootSymbol) {
         currentSymbol = rootSymbol;
         symbolMap.put(currentSymbol.getCtx(), currentSymbol);
     }
@@ -26,13 +26,13 @@ public class SymbolTable {
     }
 
     // Adds a symbol at the current level in the symbol table
-    public void addSymbol(Symbol symbol) {
+    public void addSymbol(LocalSymbol symbol) {
         currentSymbol.addChild(symbol);
         symbolMap.put(symbol.getCtx(), symbol);
         previousSymbol = symbol;
     }
 
-    public Symbol getSymbol(ParserRuleContext ctx) {
+    public LocalSymbol getSymbol(ParserRuleContext ctx) {
         return symbolMap.get(ctx);
     }
 

@@ -1,7 +1,7 @@
 package io.github.bbrown683.skald.antlr4;
 
-import io.github.bbrown683.skald.reference.ReferenceTable;
-import io.github.bbrown683.skald.symbol.*;
+import io.github.bbrown683.skald.symbol.external.ExternalSymbolTable;
+import io.github.bbrown683.skald.symbol.local.*;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.Type;
 import org.apache.commons.lang3.tuple.Pair;
@@ -9,44 +9,53 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.List;
 
 public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
-    private SymbolTable symbolTable;
-    private final ReferenceTable referenceTable = new ReferenceTable();
+    private LocalSymbolTable localSymbolTable;
+    private final ExternalSymbolTable externalSymbolTable = new ExternalSymbolTable();
     private final String className;
 
     public SymbolVisitor(String className) {
         this.className = className;
     }
 
-    public SymbolTable getSymbolTable() {
-        return symbolTable;
+    public LocalSymbolTable getLocalSymbolTable() {
+        return localSymbolTable;
     }
 
-    public ReferenceTable getReferenceTable() {
-        return referenceTable;
+    public ExternalSymbolTable getExternalSymbolTable() {
+        return externalSymbolTable;
     }
 
     @Override
     public Object visitClassFile(SkaldParser.ClassFileContext ctx) {
-        symbolTable = new SymbolTable(new ClassFileSymbol(className, ctx));
+        localSymbolTable = new LocalSymbolTable(new LocalClassFileSymbol(className, ctx));
         visitChildren(ctx);
         return null;
     }
 
     @Override
     public Object visitPackagePath(SkaldParser.PackagePathContext ctx) {
-        referenceTable.addImport(visitPath(ctx.path()) + ".*"); // Add package path to imports
+        externalSymbolTable.addImport(visitPath(ctx.path()) + ".*"); // Add package path to imports
         return null;
     }
 
     @Override
     public Object visitImportPath(SkaldParser.ImportPathContext ctx) {
-        referenceTable.addImport(visitPath(ctx.path()));
+        externalSymbolTable.addImport(visitPath(ctx.path()));
         return null;
     }
 
     @Override
     public String visitPath(SkaldParser.PathContext ctx) {
         return ctx.getText();
+    }
+
+    @Override
+    public Object visitConstructor(SkaldParser.ConstructorContext ctx) {
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("constructor", ctx));
+        localSymbolTable.enterScope();
+        visitChildren(ctx);
+        localSymbolTable.exitScope();
+        return null;
     }
 
     @Override
@@ -57,10 +66,10 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
         boolean isPublic = ctx.PUBLIC() != null;
         boolean isStatic = ctx.STATIC() != null;
 
-        symbolTable.addSymbol(new FunctionSymbol(functionName, ctx, getType(typeName), isPublic, isStatic));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalFunctionSymbol(functionName, ctx, getType(typeName), isPublic, isStatic));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 
@@ -72,7 +81,7 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
         boolean isMutable = ctx.MUTABLE() != null;
         boolean isArray = ctx.array() != null && !ctx.array().isEmpty();
 
-        symbolTable.addSymbol(new VariableSymbol(variableName, ctx, getType(typeName), false, false, isMutable, isArray, true, null));
+        localSymbolTable.addSymbol(new LocalVariableSymbol(variableName, ctx, getType(typeName), false, false, isMutable, isArray, true, null));
         visitChildren(ctx);
         return null;
     }
@@ -95,53 +104,59 @@ public class SymbolVisitor extends SkaldParserBaseVisitor<Object> {
         } else if(literals != null) {
             value = visitLiterals(ctx.literals());
         }
-        symbolTable.addSymbol(new VariableSymbol(variableName, ctx, getType(typeName), isPublic, isStatic, isMutable, isArray, false, value));
+        localSymbolTable.addSymbol(new LocalVariableSymbol(variableName, ctx, getType(typeName), isPublic, isStatic, isMutable, isArray, false, value));
+        return null;
+    }
+
+    @Override
+    public Object visitFunctionCall(SkaldParser.FunctionCallContext ctx) {
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("function-call", ctx));
         return null;
     }
 
     @Override
     public Object visitForLoop(SkaldParser.ForLoopContext ctx) {
-        symbolTable.addSymbol(new BlockSymbol("for", ctx));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("for", ctx));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 
     @Override
     public Object visitWhileLoop(SkaldParser.WhileLoopContext ctx) {
-        symbolTable.addSymbol(new BlockSymbol("while", ctx));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("while", ctx));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 
     @Override
     public Object visitIfStatement(SkaldParser.IfStatementContext ctx) {
-        symbolTable.addSymbol(new BlockSymbol("if", ctx));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("if", ctx));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 
     @Override
     public Object visitElseIfStatement(SkaldParser.ElseIfStatementContext ctx) {
-        symbolTable.addSymbol(new BlockSymbol("else-if", ctx));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("else-if", ctx));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 
 
     @Override
     public Object visitElseStatement(SkaldParser.ElseStatementContext ctx) {
-        symbolTable.addSymbol(new BlockSymbol("else", ctx));
-        symbolTable.enterScope();
+        localSymbolTable.addSymbol(new LocalMarkerSymbol("else", ctx));
+        localSymbolTable.enterScope();
         visitChildren(ctx);
-        symbolTable.exitScope();
+        localSymbolTable.exitScope();
         return null;
     }
 

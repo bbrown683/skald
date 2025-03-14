@@ -1,14 +1,14 @@
-package io.github.bbrown683.skald.symbol;
+package io.github.bbrown683.skald.symbol.local;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.bcel.generic.Type;
 
-public class FunctionSymbol extends Symbol {
+public class LocalFunctionSymbol extends LocalSymbol {
     private final Type returnType;
     private final boolean isPublic;
     private final boolean isStatic;
 
-    public FunctionSymbol(String name, ParserRuleContext ctx, Type returnType, boolean isPublic, boolean isStatic) {
+    public LocalFunctionSymbol(String name, ParserRuleContext ctx, Type returnType, boolean isPublic, boolean isStatic) {
         super(name, ctx);
         this.returnType = returnType;
         this.isPublic = isPublic;

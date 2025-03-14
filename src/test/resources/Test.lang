@@ -3,6 +3,8 @@ package language.test;
 import java.io.PrintStream;
 
 pub fn main(args: string[]) {
-    var helloWorld : string = "Hello, World!";
-    var helloWorld2 : string = helloWorld;
+    // Need to allow for full path types.
+    //var printStream : java.io.PrintStream = System.out;
+    var printStream : PrintStream = System.out;
+    printStream.println();
 }

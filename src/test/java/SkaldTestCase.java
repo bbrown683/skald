@@ -1,8 +1,10 @@
 import io.github.bbrown683.skald.antlr4.*;
-import io.github.bbrown683.skald.reference.ReferenceTable;
+import io.github.bbrown683.skald.symbol.external.ExternalSymbolTable;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.util.BCELifier;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -27,8 +29,8 @@ public class SkaldTestCase {
         var symbolVisitor = new SymbolVisitor(className);
         symbolVisitor.visit(classFileContext);
 
-        var symbolTable = symbolVisitor.getSymbolTable();
-        var referenceTable = symbolVisitor.getReferenceTable();
+        var symbolTable = symbolVisitor.getLocalSymbolTable();
+        var referenceTable = symbolVisitor.getExternalSymbolTable();
 
         //var semanticVisitor = new SemanticVisitor(className, symbolTable);
         //semanticVisitor.visitClassFile(classFileContext);
@@ -44,7 +46,6 @@ public class SkaldTestCase {
         try(InputStream inputStream = loadFile(filename)) {
             String className = filename.split("\\.")[0];
             visit(className, inputStream);
-
         } catch(Exception e) {
             System.err.println("Failed to parse file due to error: " + e.getMessage());
         }
@@ -52,10 +53,10 @@ public class SkaldTestCase {
 
     @Test
     public void test2() {
-        ReferenceTable referenceTable = new ReferenceTable();
-        referenceTable.addImport("java.io.*");
-        referenceTable.addImport("java.lang.reflect.Modifier");
-        referenceTable.addImport("java.util.List");
-        referenceTable.addImport("java.util.Scanner");
+        ExternalSymbolTable externalSymbolTable = new ExternalSymbolTable();
+        externalSymbolTable.addImport("java.io.*");
+        externalSymbolTable.addImport("java.lang.reflect.Modifier");
+        externalSymbolTable.addImport("java.util.List");
+        externalSymbolTable.addImport("java.util.Scanner");
     }
 }

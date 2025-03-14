@@ -1,9 +1,9 @@
-package io.github.bbrown683.skald.symbol;
+package io.github.bbrown683.skald.symbol.local;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.bcel.generic.Type;
 
-public class VariableSymbol extends Symbol {
+public class LocalVariableSymbol extends LocalSymbol {
     private final Type type;
     private final boolean isPublic;
     private final boolean isStatic;
@@ -12,7 +12,7 @@ public class VariableSymbol extends Symbol {
     private final boolean isParameter;
     private final Object value;
 
-    public VariableSymbol(String name, ParserRuleContext ctx, Type type, boolean isPublic, boolean isStatic, boolean isMutable, boolean isArray, boolean isParameter, Object value) {
+    public LocalVariableSymbol(String name, ParserRuleContext ctx, Type type, boolean isPublic, boolean isStatic, boolean isMutable, boolean isArray, boolean isParameter, Object value) {
         super(name, ctx);
         this.type = type;
         this.isPublic = isPublic;

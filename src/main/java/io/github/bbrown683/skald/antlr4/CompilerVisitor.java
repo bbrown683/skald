@@ -2,11 +2,12 @@ package io.github.bbrown683.skald.antlr4;
 
 import io.github.bbrown683.skald.jvm.InstructionGenerator;
 import io.github.bbrown683.skald.jvm.InstructionUtil;
-import io.github.bbrown683.skald.reference.ReferenceTable;
-import io.github.bbrown683.skald.symbol.FunctionSymbol;
-import io.github.bbrown683.skald.symbol.Symbol;
-import io.github.bbrown683.skald.symbol.SymbolTable;
-import io.github.bbrown683.skald.symbol.VariableSymbol;
+import io.github.bbrown683.skald.symbol.external.ExternalFunctionSymbol;
+import io.github.bbrown683.skald.symbol.external.ExternalSymbol;
+import io.github.bbrown683.skald.symbol.external.ExternalSymbolTable;
+import io.github.bbrown683.skald.symbol.external.ExternalVariableSymbol;
+import io.github.bbrown683.skald.symbol.local.*;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.bcel.Const;
 import org.apache.bcel.generic.*;
 import org.apache.commons.lang3.StringUtils;
@@ -20,14 +21,14 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
     private ClassGen classGen;
     private ConstantPoolGen constantPoolGen;
     private InstructionUtil instructionUtil;
-    private final SymbolTable symbolTable;
-    private final ReferenceTable referenceTable;
-    private final Map<Symbol,LocalVariableGen> localVariables = new HashMap<>();
+    private final LocalSymbolTable localSymbolTable;
+    private final ExternalSymbolTable externalSymbolTable;
+    private final Map<LocalSymbol,LocalVariableGen> localVariables = new HashMap<>();
 
-    public CompilerVisitor(String className, SymbolTable symbolTable, ReferenceTable referenceTable) {
+    public CompilerVisitor(String className, LocalSymbolTable localSymbolTable, ExternalSymbolTable externalSymbolTable) {
         this.className = className;
-        this.symbolTable = symbolTable;
-        this.referenceTable = referenceTable;
+        this.localSymbolTable = localSymbolTable;
+        this.externalSymbolTable = externalSymbolTable;
     }
 
     @Override
@@ -45,24 +46,12 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         instructionUtil = new InstructionUtil(classGen, constantPoolGen);
 
         // Create empty constructor.
-        /*
-        var constructorCtx = new SkaldParser.FunctionContext(null, -1);
-        constructorCtx.start = ctx.start;
-        constructorCtx.stop = ctx.stop;
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.FUNCTION, "fn")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.IDENTIFIER, "new")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.LEFT_PAREN, "(")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.RIGHT_PAREN, ")")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.LEFT_BRACE, "{")));
-        constructorCtx.addChild(new TerminalNodeImpl(new CommonToken(SkaldParser.RIGHT_BRACE, "}")));
-        visitFunction(constructorCtx, ctx.variable());
-        */
+        generateConstructor(ctx);
 
         var functions = ctx.function();
         if(functions != null) functions.forEach(this::visitFunction);
 
         var javaClass = classGen.getJavaClass();
-        System.out.println(javaClass);
         try(FileOutputStream fileOutputStream = new FileOutputStream(className + ".class")) {
             javaClass.dump(fileOutputStream);
         } catch (Exception e) {
@@ -93,7 +82,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
 
     @Override
     public Pair<String,Type> visitFunctionParameter(SkaldParser.FunctionParameterContext ctx) {
-        var symbol = (VariableSymbol)symbolTable.getSymbol(ctx);
+        var symbol = (LocalVariableSymbol) localSymbolTable.getSymbol(ctx);
         var identifierName = symbol.getName();
         var type = symbol.getType();
 
@@ -106,8 +95,64 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         return Pair.of(identifierName, type);
     }
 
-    public Object visitFunction(SkaldParser.FunctionContext ctx, List<SkaldParser.VariableContext> fieldVariables) {
-        var symbol = (FunctionSymbol)symbolTable.getSymbol(ctx);
+    private Object generateConstructor(ParserRuleContext ctx) {
+        System.out.println("===================================");
+        System.out.println("Generating Constructor");
+
+        List<String> parameterNames = new ArrayList<>();
+        List<Type> parameterTypes = new ArrayList<>();
+        if (ctx instanceof SkaldParser.ConstructorContext constructorCtx) {
+            var parameters = constructorCtx.functionParameter();
+            parameters.forEach((functionCtx) -> {
+                var pair = visitFunctionParameter(functionCtx);
+                parameterNames.add(pair.getLeft());
+                parameterTypes.add(pair.getRight());
+            });
+        }
+
+        var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen);
+        var methodGen = instructionGenerator.getMethodGen(Const.ACC_PUBLIC, "<init>", Type.VOID, parameterTypes, parameterNames);
+
+        var parameters = Map.of(
+                MethodGen.class, methodGen,
+                InstructionGenerator.class, instructionGenerator
+        );
+
+        // Field variables are used when we are in a constructor and need to initialize fields.
+        instructionGenerator.callSuper(null);
+
+        if (ctx instanceof SkaldParser.ClassFileContext classFileContext) {
+            var variables = classFileContext.variable();
+            if (variables != null) {
+                variables.forEach((fieldCtx) -> visitVariable(fieldCtx, parameters));
+            }
+        } else if (ctx instanceof SkaldParser.ConstructorContext constructorCtx) {
+            var expressions = constructorCtx.expression();
+            if (expressions != null) {
+                expressions.forEach((expressionCtx) -> visitExpression(expressionCtx, parameters));
+            }
+        }
+
+        instructionGenerator.insertReturn(Type.VOID);
+        var constructorInstructions = instructionGenerator.getInstructionList();
+        var returnInstruction = constructorInstructions.getEnd();
+        methodGen.addLineNumber(returnInstruction, ctx.stop.getLine());
+
+        LocalSymbol symbol = localSymbolTable.getSymbol(ctx); // Probably refer to this for updating scopes later.
+        instructionGenerator.updateVariableScope();
+        instructionGenerator.completeFunction();
+        System.out.println("===================================");
+        return null;
+    }
+
+    @Override
+    public Object visitConstructor(SkaldParser.ConstructorContext ctx) {
+        return generateConstructor(ctx);
+    }
+
+    @Override
+    public Object visitFunction(SkaldParser.FunctionContext ctx) {
+        var symbol = (LocalFunctionSymbol) localSymbolTable.getSymbol(ctx);
 
         String functionName = symbol.getName();
         Type returnType = symbol.getReturnType();
@@ -123,68 +168,33 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
             parameterTypes.add(pair.getRight());
         });
 
-        var instructionList = new InstructionList();
+        var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen);
 
-        var isConstructor = functionName.equals("new");
         var isPublic = ctx.PUBLIC() != null ? Const.ACC_PUBLIC : 0;
         var isStatic = ctx.STATIC() != null || ctx.parent instanceof SkaldParser.ClassFileContext ? Const.ACC_STATIC : 0;
+        var methodGen = instructionGenerator.getMethodGen(isPublic | isStatic, functionName, returnType, parameterTypes, parameterNames);
 
-        var methodGen = new MethodGen(isPublic | isStatic,
-                returnType,
-                parameterTypes.toArray(new Type[0]),
-                parameterNames.toArray(new String[0]),
-                isConstructor ? "<init>" : functionName,
-                classGen.getClassName(),
-                instructionList,
-                constantPoolGen);
+        var parameters = Map.of(
+                MethodGen.class, methodGen,
+                InstructionGenerator.class, instructionGenerator
+        );
 
-        var parameters = new HashMap<Class<?>, Object>();
-        parameters.put(MethodGen.class, methodGen);
-        parameters.put(InstructionList.class, instructionList);
+        ctx.expression().forEach((expressionCtx) -> visitExpression(expressionCtx, parameters));
 
-        // Field variables are used when we are in a constructor and need to initialize fields.
-        if(isConstructor && fieldVariables != null) {
-            instructionList.append(instructionUtil.callSuper(null));
-            fieldVariables.forEach((fieldCtx) -> visitVariable(fieldCtx, parameters));
-        } else {
-            ctx.expression().forEach((expressionCtx) -> visitExpression(expressionCtx, parameters));
-        }
-        var returnInstruction = instructionUtil.insertReturn(returnType);
-        methodGen.addLineNumber(returnInstruction.getStart(), ctx.stop.getLine());
-        instructionList.append(returnInstruction);
+        instructionGenerator.insertReturn(Type.VOID);
 
-        // The way local variables work in the JVM is that they have typically two instructions:
-        // 1. Push the value onto the stack
-        // 2. Store the value in the local variable
-        // Thus we need to set the start instruction to the next available instruction after these,
-        // as at that point the variable is constructed. Anypoint before that and the variable will be corrupted.
-        // TODO: We need to figure out how to handle the scope of the local variable as it is currently set to the end of the method,
-        //  but situations such as if statements or loops will require the variable to be set to the end of the block.
-        for(var localVariable : methodGen.getLocalVariables()) {
-            var localEnd = localVariable.getEnd();
-            var methodEnd = instructionList.getEnd();
-            if(localEnd != methodEnd) {
-                var localNext  = localEnd.getNext();
-                localVariable.setStart(localNext != null ? localNext : methodEnd);
-                localVariable.setEnd(methodEnd);
-            }
-        }
+        var methodInstructions = instructionGenerator.getInstructionList();
+        var returnInstruction = methodInstructions.getEnd();
+        methodGen.addLineNumber(returnInstruction, ctx.stop.getLine());
 
-        methodGen.setMaxLocals();
-        methodGen.setMaxStack();
-        classGen.addMethod(methodGen.getMethod());
-        instructionList.dispose();
+        instructionGenerator.updateVariableScope();
+        instructionGenerator.completeFunction();
         System.out.println("===================================");
         return null;
     }
 
-    @Override
-    public Object visitFunction(SkaldParser.FunctionContext ctx) {
-        return visitFunction(ctx, Collections.emptyList());
-    }
-
     public Object visitVariable(SkaldParser.VariableContext ctx, Map<Class<?>, Object> parameters) {
-        var symbol = (VariableSymbol)symbolTable.getSymbol(ctx);
+        var symbol = (LocalVariableSymbol) localSymbolTable.getSymbol(ctx);
         System.out.println("-----------------------------------");
         String variableName = symbol.getName();
         var isPublic = symbol.isPublic() ? Const.ACC_PUBLIC : 0;
@@ -200,14 +210,7 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
                 ", Mutable: " + (isMutable != Const.ACC_FINAL));
 
         var methodGen = (MethodGen)parameters.get(MethodGen.class);
-        var methodInstructions = (InstructionList)parameters.get(InstructionList.class);
-
-        var variableInstructions = new InstructionList();
-        var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen, variableInstructions, methodGen);
-
-        // If we are in a constructor, we need to push the reference to the object onto the stack.
-        var isConstructor = methodGen.getName().equals("<init>");
-        if(isConstructor) instructionGenerator.callSuper();
+        var instructionGenerator = new InstructionGenerator(classGen, constantPoolGen, methodGen);
 
         var literals = ctx.literals();
         var reference = ctx.reference();
@@ -217,40 +220,54 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
 
             // If we are in a constructor, we need to create a field and store the value in it.
             // Otherwise, we need to create a local variable and store the value in it.
-            if(isConstructor) {
+            if(methodGen.getName().equals("<init>")) {
                 instructionGenerator.addVariableAsLiteralField(variableName, value, type, isPublic | isStatic | isMutable, className);
             } else {
                 var localVariable = instructionGenerator.addVariableLiteralAsLiteralLocalVariable(variableName, value, type);
                 localVariables.put(symbol, localVariable);
             }
         } else if (reference != null) {
-            String referenceName = (String)symbol.getValue();
-            System.out.println("Reference: " + referenceName);
+            String symbolName = (String)symbol.getValue();
+            System.out.println("Reference: " + symbolName);
             // Check symbol table first
-            var visibleSymbols = symbol.getVisibleSymbols();
-            if(visibleSymbols != null) {
-                for (var visibleSymbol : visibleSymbols) {
-                    if (!referenceName.equals(visibleSymbol.getName()) ||
-                            !(visibleSymbol instanceof VariableSymbol variableSymbol)) continue;
-
-                    if(variableSymbol.isStatic()) {
-                        instructionGenerator.addVariableAsStaticReference(referenceName, variableName, type);
-                    } else {
-                        var localVariable = localVariables.get(variableSymbol);
-                        if(localVariable != null) {
-                            instructionGenerator.addVariableAsReference(variableName, localVariable);
-                        }
-                    }
+            var localSymbol = symbol.findSymbol(symbolName, LocalVariableSymbol.class);
+            if(localSymbol != null) {
+                if (localSymbol.isStatic()) {
+                    instructionGenerator.addVariableAsStaticReference(symbolName, variableName, className, type);
+                } else {
+                    instructionGenerator.addVariableAsReference(variableName, localVariables.get(localSymbol));
                 }
             } else {
-                //referenceTable.getReference();
+                ExternalVariableSymbol externalSymbol;
+                String symbolParentName = "";
+                String actualSymbolName = "";
+                if (symbolName.contains(".")) { // Static symbol
+                    symbolParentName = StringUtils.substringBeforeLast(symbolName, ".");
+                    actualSymbolName = StringUtils.substringAfterLast(symbolName, ".");
+                    var externalSymbols = externalSymbolTable.getSymbol(actualSymbolName, symbolParentName, ExternalVariableSymbol.class);
+                    externalSymbol = externalSymbols.getFirst();
+                } else {
+                    var externalSymbols = externalSymbolTable.getSymbol(symbolName, null, ExternalVariableSymbol.class);
+                    externalSymbol = externalSymbols.getFirst();
+                }
+
+                if (externalSymbol != null) {
+                    if (externalSymbol.isStatic()) {
+                        instructionGenerator.addVariableAsStaticReference(variableName, symbolParentName, actualSymbolName, externalSymbol.getType());
+                    } else {
+                        instructionGenerator.addVariableAsReference(variableName, localVariables.get(localSymbol));
+                    }
+                }
             }
         } else if (expression != null) {
             visitExpression(expression, parameters);
         }
 
+        var variableInstructions = instructionGenerator.getInstructionList();
         methodGen.addLineNumber(variableInstructions.getStart(), ctx.stop.getLine());
-        methodInstructions.append(variableInstructions);
+
+        var methodInstructions = (InstructionGenerator)parameters.get(InstructionGenerator.class);
+        methodInstructions.getInstructionList().append(variableInstructions);
         return null;
     }
 
@@ -259,12 +276,10 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
         return visitVariable(ctx, Collections.emptyMap());
     }
 
-    @Override
-    public Object visitFunctionCallArgument(SkaldParser.FunctionCallArgumentContext ctx) {
+    public Object visitFunctionCallArgument(SkaldParser.FunctionCallArgumentContext ctx, Map<Class<?>, Object> parameters) {
         var literals = ctx.literals();
         if(literals != null) {
             Object literal = visitLiterals(literals);
-
         }
 
         var reference = ctx.reference();
@@ -280,28 +295,64 @@ public class CompilerVisitor extends SkaldParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitFunctionCall(SkaldParser.FunctionCallContext ctx) {
+    public Object visitFunctionCallArgument(SkaldParser.FunctionCallArgumentContext ctx) {
+        return visitFunctionCallArgument(ctx, Collections.emptyMap());
+    }
+
+    public Object visitFunctionCall(SkaldParser.FunctionCallContext ctx, Map<Class<?>, Object> parameters) {
+        var localSymbol = (LocalMarkerSymbol)localSymbolTable.getSymbol(ctx);
         System.out.println("-----------------------------------");
         String reference = visitReference(ctx.reference());
 
+        var arguments = ctx.functionCallArgument();
+        if(arguments != null) arguments.forEach((argumentCtx) -> visitFunctionCallArgument(argumentCtx, parameters));
+
+        // TODO: also consider local functions with and without variable access.
         if(reference.contains(".")) {
             String referenceName = StringUtils.substringBeforeLast(reference, ".");
             String functionName = StringUtils.substringAfterLast(reference, ".");
+            var referenceSymbol = localSymbol.findSymbol(referenceName, LocalVariableSymbol.class);
+            var type = referenceSymbol.getType();
+
             System.out.println("Reference: " + referenceName + ", Function: " + functionName);
+            var externalSymbols = externalSymbolTable.getSymbol(functionName, type.getClassName(), ExternalFunctionSymbol.class);
+
+            // Find matching function, due to overloading
+            int argumentCount;
+            if (arguments != null) argumentCount = arguments.size();
+            else argumentCount = 0;
+
+            var externalSymbol = externalSymbols
+                    .stream()
+                    .filter(s -> s.getParameters().size() == argumentCount)
+                    .findFirst()
+                    .orElse(null);
+
+            var instructionGenerator = (InstructionGenerator)parameters.get(InstructionGenerator.class);
+
+            List<Type> argumentTypes = externalSymbol.getParameters().stream().map(ExternalVariableSymbol::getType).toList();
+            instructionGenerator.callFunction(type.getClassName(), functionName, externalSymbol.getReturnType(), argumentTypes.toArray(new Type[0]), externalSymbol.isStatic());
         } else {
-            System.out.println("Function: " + reference);
+            System.out.println("Local Function: " + reference);
+            //externalSymbol = externalSymbolTable.getSymbol(reference, null, ExternalFunctionSymbol.class);
         }
 
-        ctx.functionCallArgument().forEach(this::visitFunctionCallArgument);
         return null;
     }
 
-    public Object visitExpression(SkaldParser.ExpressionContext ctx, Map<Class<?>, Object> parameters) {
-        if (ctx.variable() != null) {
-            return visitVariable(ctx.variable(), parameters);
+    @Override
+    public Object visitFunctionCall(SkaldParser.FunctionCallContext ctx) {
+        return visitFunctionCall(ctx, Collections.emptyMap());
+    }
+
+    public Object visitExpression(SkaldParser.ExpressionContext ctx, Map<Class<?>,Object> parameters) {
+        var variable = ctx.variable();
+        if (variable != null) {
+            return visitVariable(variable, parameters);
         }
-        if (ctx.functionCall() != null) {
-            return visitFunctionCall(ctx.functionCall());
+        var functionCall = ctx.functionCall();
+        if (functionCall != null) {
+            return visitFunctionCall(functionCall, parameters);
         }
         return null;
     }

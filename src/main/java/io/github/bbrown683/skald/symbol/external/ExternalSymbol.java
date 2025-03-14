@@ -1,11 +1,13 @@
-package io.github.bbrown683.skald.reference;
+package io.github.bbrown683.skald.symbol.external;
 
-public abstract class Reference {
+// External symbols are symbols that are defined in other files unlike LocalSymbols, and are referenced in the current file.
+// They do not need scope information, as they are not defined in the current file.
+public abstract class ExternalSymbol {
     private final String name;
     private final boolean isPublic;
     private final boolean isStatic;
 
-    public Reference(String name, boolean isPublic, boolean isStatic) {
+    public ExternalSymbol(String name, boolean isPublic, boolean isStatic) {
         this.name = name;
         this.isPublic = isPublic;
         this.isStatic = isStatic;

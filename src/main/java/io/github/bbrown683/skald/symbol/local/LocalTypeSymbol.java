@@ -1,13 +1,13 @@
-package io.github.bbrown683.skald.symbol;
+package io.github.bbrown683.skald.symbol.local;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
-public class TypeSymbol extends Symbol {
+public class LocalTypeSymbol extends LocalSymbol {
     private final String packagePath;
     private final boolean isPublic;
     private final boolean isStatic;
 
-    public TypeSymbol(String name, ParserRuleContext ctx, String packagePath, boolean isPublic, boolean isStatic) {
+    public LocalTypeSymbol(String name, ParserRuleContext ctx, String packagePath, boolean isPublic, boolean isStatic) {
         super(name, ctx);
         this.packagePath = packagePath;
         this.isPublic = isPublic;

@@ -1,8 +1,9 @@
 import java.io.PrintStream;
 
-public class Test {
+public class HelloWorldJavaTest {
     public static void main(String[] args) {
         String helloWorld = "Hello, World!";
-        String helloWorld2 = helloWorld;
+        PrintStream printStream = System.out;
+        printStream.println();
     }
 }

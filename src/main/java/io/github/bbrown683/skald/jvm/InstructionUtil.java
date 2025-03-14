@@ -373,10 +373,11 @@ public class InstructionUtil {
         return instructionList;
     }
 
-    public InstructionList callMethod(String className, String methodName, Type returnType, Type[] argumentTypes) {
+    public InstructionList callFunction(String className, String methodName, Type returnType, Type[] argumentTypes, boolean isStatic) {
         int index = constantPoolGen.addMethodref(className, methodName, Type.getMethodSignature(returnType, argumentTypes));
         InstructionList instructionList = new InstructionList();
-        instructionList.append(new INVOKESTATIC(index));
+        if(isStatic) instructionList.append(new INVOKESTATIC(index));
+        else instructionList.append(new INVOKEVIRTUAL(index));
         return instructionList;
     }
 }

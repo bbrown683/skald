@@ -1,4 +1,4 @@
-package io.github.bbrown683.skald.reference;
+package io.github.bbrown683.skald.symbol.external;
 
 import org.apache.bcel.generic.Type;
 
@@ -11,15 +11,15 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Predicate;
 
-public class ReferenceLoader extends ClassLoader {
-    private final Map<String,byte[]> referenceMap = new HashMap<>();
+public class ExternalReferenceLoader extends ClassLoader {
+    private final Map<String,byte[]> symbolMap = new HashMap<>();
 
-    public Map<String,Reference> getReferences(String importPath, boolean isPackage) {
-        var references = new HashMap<String,Reference>();
+    public Map<String, ExternalSymbol> getSymbols(String importPath, boolean isPackage) {
+        var symbols = new HashMap<String, ExternalSymbol>();
         if(importPath.startsWith("java")) { // Look at the java.base module
             for(var clazz : getBaseClasses(importPath, isPackage)) {
-                var reference = getReference(clazz);
-                references.put(reference.getName(), reference);
+                var symbol = getSymbol(clazz);
+                symbols.put(symbol.getName(), symbol);
             }
         } else { // Look at the standard class paths
             var externalClassPaths = getExternalClassPaths(importPath);
@@ -30,18 +30,18 @@ public class ReferenceLoader extends ClassLoader {
                 }
                 String classFileName = path.getFileName().toString();
                 String filename = importPath + "." + classFileName.replace(".class", "");
-                referenceMap.put(filename, bytes);
+                symbolMap.put(filename, bytes);
                 try {
                     var clazz = findClass(filename);
-                    var reference = getReference(clazz);
-                    references.put(reference.getName(), reference);
+                    var symbol = getSymbol(clazz);
+                    symbols.put(symbol.getName(), symbol);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        return references;
+        return symbols;
     }
 
     // Classes under the java path are not in the classpath,
@@ -109,8 +109,8 @@ public class ReferenceLoader extends ClassLoader {
         return null;
     }
 
-    private Reference getReference(Class<?> clazz) {
-        var typeFields = new ArrayList<VariableReference>();
+    private ExternalSymbol getSymbol(Class<?> clazz) {
+        var typeFields = new ArrayList<ExternalVariableSymbol>();
         boolean isEnum = clazz.isEnum();
         for(var fields : clazz.getFields()) {
             var fieldName = fields.getName();
@@ -119,39 +119,39 @@ public class ReferenceLoader extends ClassLoader {
             var isStatic = Modifier.isStatic(fields.getModifiers());
             var isMutable = !Modifier.isFinal(fields.getModifiers());
             var isArray = fields.getType().isArray();
-            typeFields.add(new VariableReference(fieldName, isPublic, isStatic, Type.getType(fieldType), isMutable, isArray));
+            typeFields.add(new ExternalVariableSymbol(fieldName, isPublic, isStatic, Type.getType(fieldType), isMutable, isArray));
         }
 
-        var typeFunctions = new ArrayList<FunctionReference>();
+        var typeFunctions = new ArrayList<ExternalFunctionSymbol>();
         for(var method : clazz.getMethods()) {
             var methodName = method.getName();
             var returnType = method.getReturnType();
             var isPublic = Modifier.isPublic(method.getModifiers());
             var isStatic = Modifier.isStatic(method.getModifiers());
 
-            var functionParameters = new ArrayList<VariableReference>();
+            var functionParameters = new ArrayList<ExternalVariableSymbol>();
             for(var parameter : method.getParameters()) {
                 var parameterName = parameter.getName();
                 var parameterType = parameter.getType();
                 var isArray = parameter.getType().isArray();
-                functionParameters.add(new VariableReference(parameterName, false, false, Type.getType(parameterType), true, isArray));
+                functionParameters.add(new ExternalVariableSymbol(parameterName, false, false, Type.getType(parameterType), true, isArray));
             }
-            typeFunctions.add(new FunctionReference(methodName, isPublic, isStatic, Type.getType(returnType), functionParameters));
+            typeFunctions.add(new ExternalFunctionSymbol(methodName, isPublic, isStatic, Type.getType(returnType), functionParameters));
         }
 
         var superClass = clazz.getSuperclass();
         String superClassName = superClass == null ? null : superClass.getName();
         //var types = clazz.getClasses();
         if(isEnum) { // TODO: To be tested.
-            return new EnumReference(clazz.getSimpleName(), true, false);
+            return new ExternalEnumSymbol(clazz.getSimpleName(), true, false);
         } else {
-            return new TypeReference(clazz.getSimpleName(), true, false, typeFields, typeFunctions, null, superClassName);
+            return new ExternalTypeSymbol(clazz.getSimpleName(), true, false, typeFields, typeFunctions, null, superClassName);
         }
     }
 
     @Override
     public Class findClass(String name) {
-        var bytes = referenceMap.get(name);
+        var bytes = symbolMap.get(name);
         if (bytes == null) {
             return null;
         }

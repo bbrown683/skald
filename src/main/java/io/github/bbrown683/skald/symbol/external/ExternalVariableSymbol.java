@@ -1,18 +1,18 @@
-package io.github.bbrown683.skald.reference;
+package io.github.bbrown683.skald.symbol.external;
 
 import org.apache.bcel.generic.Type;
 
-public class VariableReference extends Reference {
+public class ExternalVariableSymbol extends ExternalSymbol {
     private final Type type;
     private final boolean isMutable;
     private final boolean isArray;
 
-    public VariableReference(String name,
-                             boolean isPublic,
-                             boolean isStatic,
-                             Type type,
-                             boolean isMutable,
-                             boolean isArray) {
+    public ExternalVariableSymbol(String name,
+                                  boolean isPublic,
+                                  boolean isStatic,
+                                  Type type,
+                                  boolean isMutable,
+                                  boolean isArray) {
         super(name, isPublic, isStatic);
         this.type = type;
         this.isMutable = isMutable;
